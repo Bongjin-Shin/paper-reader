@@ -1,0 +1,17 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/resources/windows/codex/
+src-tauri/resources/ubuntu/codex/
+release/
+.tools/
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store

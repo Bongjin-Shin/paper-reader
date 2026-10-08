@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+# An upgrade also runs prerm; never interfere with the app or data on upgrades.
+[ "${1:-}" = remove ] || exit 0
+
+# An open app/helper could recreate files after cleanup. Require a clean exit
+# instead of killing a reader session while it is saving work.
+for process in /proc/[0-9]*/exe; do
+    executable=$(readlink -- "$process" 2>/dev/null) || continue
+    executable=${executable% (deleted)}
+    case "$executable" in
+        */paper-vocabulary|'/usr/lib/Paper Vocabulary/runtime/'*|*/com.papervocabulary.reader/PaperVocabulary/runtime/*|*/com.papervocabulary.reader/PaperVocabulary/claude/*)
+            echo 'Paper Vocabulary: 앱과 연결 도구를 종료한 뒤 다시 제거해 주세요. 사용 데이터는 아직 삭제하지 않았습니다.' >&2
+            exit 1
+            ;;
+    esac
+done

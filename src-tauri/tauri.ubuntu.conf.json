@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["deb"],
+    "category": "Education",
+    "publisher": "Paper Vocabulary",
+    "shortDescription": "PDF reader with translation, paper chat, and vocabulary",
+    "longDescription": "Read papers, translate passages, discuss documents with ChatGPT or Claude, and keep a local vocabulary library. Personal data is stored separately in each user's home directory.",
+    "resources": {
+      "resources/ubuntu/codex/": "runtime/"
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libc6 (>= 2.39)",
+          "libpoppler-glib8t64 | libpoppler-glib8",
+          "libglib2.0-bin",
+          "xdg-utils"
+        ],
+        "preRemoveScript": "../packaging/ubuntu/prerm",
+        "postRemoveScript": "../packaging/ubuntu/postrm",
+        "files": {
+          "/usr/share/doc/paper-vocabulary/README.ko.txt": "../packaging/ubuntu/설치안내.txt"
+        }
+      }
+    }
+  }
+}

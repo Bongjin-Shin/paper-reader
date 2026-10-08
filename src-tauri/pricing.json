@@ -1,0 +1,7 @@
+{
+  "model": "gpt-5.6-luna",
+  "inputNanoUsdPerToken": 200,
+  "cachedInputNanoUsdPerToken": 20,
+  "cacheWriteNanoUsdPerToken": 250,
+  "outputNanoUsdPerToken": 1200
+}

@@ -1,0 +1,1932 @@
+[
+  {
+    "kind": "sample",
+    "scenario": "warm-scroll",
+    "counts": {},
+    "spans": {
+      "layoutRead": [
+        6,
+        1,
+        2.0000000000004547,
+        7,
+        1,
+        4,
+        1.0000000000004547,
+        1.0000000000004547
+      ]
+    },
+    "wheels": [
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ]
+    ],
+    "frames": 84,
+    "frameP95Ms": 17,
+    "maxFrameMs": 19,
+    "framesOver25": 0,
+    "inputDelayP95Ms": 3,
+    "readyTailMs": 3,
+    "inputs": 40,
+    "topBefore": 0,
+    "topAfter": 0,
+    "scale": "125%",
+    "dpr": 1,
+    "run": 0
+  },
+  {
+    "kind": "sample",
+    "scenario": "cold-scroll",
+    "counts": {
+      "pageRender": 17,
+      "highlightTransform": 336,
+      "canvasRender": 4,
+      "textLayerRender": 3,
+      "pageReady": 3
+    },
+    "spans": {
+      "layoutRead": [
+        10.99999999999909,
+        1,
+        9,
+        1,
+        1.9999999999990905,
+        6.0000000000009095,
+        1.9999999999990905,
+        3,
+        12
+      ],
+      "canvasSlice": [
+        9,
+        0,
+        11,
+        8,
+        3.0000000000009095,
+        4,
+        0,
+        12.99999999999909,
+        1
+      ],
+      "textRender": [
+        14.99999999999909,
+        6.0000000000009095,
+        2
+      ]
+    },
+    "wheels": [
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ]
+    ],
+    "frames": 56,
+    "frameP95Ms": 57,
+    "maxFrameMs": 72,
+    "framesOver25": 5,
+    "inputDelayP95Ms": 48,
+    "readyTailMs": 2,
+    "inputs": 40,
+    "topBefore": 8132,
+    "topAfter": 11852,
+    "scale": "125%",
+    "dpr": 1,
+    "run": 0
+  },
+  {
+    "kind": "sample",
+    "scenario": "zoom",
+    "counts": {
+      "appRender": 24,
+      "pageRender": 51,
+      "highlightTransform": 480,
+      "canvasRender": 5,
+      "textLayerRender": 2,
+      "pageReady": 5
+    },
+    "spans": {
+      "layoutRead": [
+        1,
+        1,
+        1,
+        2,
+        1,
+        2,
+        2,
+        1,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "canvasSlice": [
+        0,
+        8,
+        11,
+        12.99999999999909,
+        10.99999999999909,
+        11.99999999999909
+      ],
+      "textRender": [
+        2,
+        1.9999999999990905
+      ]
+    },
+    "wheels": [
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ]
+    ],
+    "frames": 61,
+    "frameP95Ms": 18,
+    "maxFrameMs": 25,
+    "framesOver25": 0,
+    "inputDelayP95Ms": 16,
+    "readyTailMs": 201,
+    "inputs": 20,
+    "topBefore": 0,
+    "topAfter": 0,
+    "scale": "90%",
+    "dpr": 1,
+    "run": 0
+  },
+  {
+    "kind": "sample",
+    "scenario": "warm-scroll",
+    "counts": {},
+    "spans": {
+      "layoutRead": [
+        4.000000000000455,
+        2,
+        8,
+        1,
+        2,
+        8,
+        2.0000000000004547
+      ]
+    },
+    "wheels": [
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ]
+    ],
+    "frames": 93,
+    "frameP95Ms": 16,
+    "maxFrameMs": 20,
+    "framesOver25": 0,
+    "inputDelayP95Ms": 3,
+    "readyTailMs": 3,
+    "inputs": 40,
+    "topBefore": 0,
+    "topAfter": 0,
+    "scale": "125%",
+    "dpr": 1,
+    "run": 1
+  },
+  {
+    "kind": "sample",
+    "scenario": "cold-scroll",
+    "counts": {
+      "pageRender": 17,
+      "highlightTransform": 336,
+      "canvasRender": 4,
+      "textLayerRender": 3,
+      "pageReady": 3
+    },
+    "spans": {
+      "layoutRead": [
+        9,
+        1.0000000000009095,
+        9.99999999999909,
+        1,
+        1,
+        5.0000000000009095,
+        2,
+        1.0000000000009095
+      ],
+      "canvasSlice": [
+        11,
+        6,
+        0,
+        9.00000000000091,
+        2,
+        0,
+        7,
+        3,
+        0,
+        0,
+        1,
+        0,
+        11,
+        1
+      ],
+      "textRender": [
+        14,
+        4.9999999999990905,
+        2
+      ]
+    },
+    "wheels": [
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ]
+    ],
+    "frames": 65,
+    "frameP95Ms": 52,
+    "maxFrameMs": 64,
+    "framesOver25": 4,
+    "inputDelayP95Ms": 44,
+    "readyTailMs": 0,
+    "inputs": 40,
+    "topBefore": 8132,
+    "topAfter": 11852,
+    "scale": "125%",
+    "dpr": 1,
+    "run": 1
+  },
+  {
+    "kind": "sample",
+    "scenario": "zoom",
+    "counts": {
+      "appRender": 23,
+      "pageRender": 51,
+      "highlightTransform": 480,
+      "canvasRender": 5,
+      "textLayerRender": 2,
+      "pageReady": 5
+    },
+    "spans": {
+      "layoutRead": [
+        1,
+        1,
+        1.0000000000009095,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2.0000000000009095,
+        2,
+        2
+      ],
+      "canvasSlice": [
+        0,
+        8,
+        10,
+        13,
+        10,
+        10.99999999999909
+      ],
+      "textRender": [
+        1,
+        1.9999999999990905
+      ]
+    },
+    "wheels": [
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ]
+    ],
+    "frames": 65,
+    "frameP95Ms": 17,
+    "maxFrameMs": 23,
+    "framesOver25": 0,
+    "inputDelayP95Ms": 9,
+    "readyTailMs": 188.0000000000009,
+    "inputs": 20,
+    "topBefore": 0,
+    "topAfter": 0,
+    "scale": "90%",
+    "dpr": 1,
+    "run": 1
+  },
+  {
+    "kind": "sample",
+    "scenario": "warm-scroll",
+    "counts": {},
+    "spans": {
+      "layoutRead": [
+        6,
+        2,
+        3,
+        8,
+        1,
+        6.999999999999545,
+        1.9999999999995453
+      ]
+    },
+    "wheels": [
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ],
+      [
+        -93,
+        0,
+        false
+      ]
+    ],
+    "frames": 90,
+    "frameP95Ms": 17,
+    "maxFrameMs": 20,
+    "framesOver25": 0,
+    "inputDelayP95Ms": 4,
+    "readyTailMs": 3,
+    "inputs": 40,
+    "topBefore": 0,
+    "topAfter": 0,
+    "scale": "125%",
+    "dpr": 1,
+    "run": 2
+  },
+  {
+    "kind": "sample",
+    "scenario": "cold-scroll",
+    "counts": {
+      "pageRender": 17,
+      "highlightTransform": 336,
+      "canvasRender": 4,
+      "textLayerRender": 3,
+      "pageReady": 3
+    },
+    "spans": {
+      "layoutRead": [
+        10,
+        1,
+        9,
+        1,
+        2,
+        8,
+        2,
+        10
+      ],
+      "canvasSlice": [
+        16,
+        3,
+        0,
+        11,
+        4,
+        0,
+        13,
+        1,
+        2,
+        0,
+        12
+      ],
+      "textRender": [
+        15,
+        5.9999999999990905,
+        2
+      ]
+    },
+    "wheels": [
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ],
+      [
+        93,
+        0,
+        false
+      ]
+    ],
+    "frames": 52,
+    "frameP95Ms": 70,
+    "maxFrameMs": 80,
+    "framesOver25": 10,
+    "inputDelayP95Ms": 71,
+    "readyTailMs": 6.0000000000009095,
+    "inputs": 40,
+    "topBefore": 8132,
+    "topAfter": 11852,
+    "scale": "125%",
+    "dpr": 1,
+    "run": 2
+  },
+  {
+    "kind": "sample",
+    "scenario": "zoom",
+    "counts": {
+      "appRender": 21,
+      "pageRender": 51,
+      "highlightTransform": 480,
+      "canvasRender": 5,
+      "textLayerRender": 2,
+      "pageReady": 5
+    },
+    "spans": {
+      "layoutRead": [
+        2,
+        1,
+        2,
+        2,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1.0000000000009095,
+        1,
+        1.0000000000009095,
+        2,
+        2,
+        1
+      ],
+      "canvasSlice": [
+        0,
+        9,
+        12.00000000000091,
+        13,
+        13,
+        11
+      ],
+      "textRender": [
+        1,
+        3
+      ]
+    },
+    "wheels": [
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        -93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ],
+      [
+        93,
+        0,
+        true
+      ]
+    ],
+    "frames": 57,
+    "frameP95Ms": 21,
+    "maxFrameMs": 32,
+    "framesOver25": 1,
+    "inputDelayP95Ms": 8.99999999999909,
+    "readyTailMs": 173,
+    "inputs": 20,
+    "topBefore": 0,
+    "topAfter": 0,
+    "scale": "90%",
+    "dpr": 1,
+    "run": 2
+  }
+]

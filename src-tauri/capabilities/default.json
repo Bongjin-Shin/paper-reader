@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Local reader window; file selection is handled by Rust.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

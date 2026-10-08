@@ -1,0 +1,2 @@
+ALTER TABLE papers ADD COLUMN memo TEXT NOT NULL DEFAULT '';
+PRAGMA user_version = 8;

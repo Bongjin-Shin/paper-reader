@@ -1,0 +1,1054 @@
+[
+  {
+    "counts": {
+      "pageRender": 220,
+      "canvasRender": 12,
+      "textLayerRender": 12,
+      "pageReady": 12
+    },
+    "frameP95Ms": 54.19999998807907,
+    "slowFrames": 21,
+    "frameCount": 46,
+    "longTasks": 4,
+    "longTaskMs": 219,
+    "jumps": [
+      {
+        "page": 24,
+        "readyMs": 184.2000000178814,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 23,
+            "time": 2834.7000000178814,
+            "scrollTop": 23322
+          },
+          {
+            "name": "textLayerRender",
+            "page": 23,
+            "time": 2851.5,
+            "scrollTop": 23322
+          },
+          {
+            "name": "pageReady",
+            "page": 23,
+            "time": 2872,
+            "scrollTop": 23322
+          },
+          {
+            "name": "canvasRender",
+            "page": 24,
+            "time": 2903.7000000178814,
+            "scrollTop": 23322
+          },
+          {
+            "name": "textLayerRender",
+            "page": 24,
+            "time": 2937,
+            "scrollTop": 23322
+          },
+          {
+            "name": "pageReady",
+            "page": 24,
+            "time": 2961.4000000059605,
+            "scrollTop": 23322
+          }
+        ]
+      },
+      {
+        "page": 4,
+        "readyMs": 124.7999999821186,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 4,
+            "time": 3042.300000011921,
+            "scrollTop": 3042
+          },
+          {
+            "name": "textLayerRender",
+            "page": 4,
+            "time": 3067.300000011921,
+            "scrollTop": 3042
+          },
+          {
+            "name": "pageReady",
+            "page": 4,
+            "time": 3085.600000023842,
+            "scrollTop": 3042
+          }
+        ]
+      },
+      {
+        "page": 20,
+        "readyMs": 106.5,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 20,
+            "time": 3164.800000011921,
+            "scrollTop": 19266
+          },
+          {
+            "name": "textLayerRender",
+            "page": 20,
+            "time": 3183.7000000178814,
+            "scrollTop": 19266
+          },
+          {
+            "name": "pageReady",
+            "page": 20,
+            "time": 3200.600000023842,
+            "scrollTop": 19266
+          }
+        ]
+      },
+      {
+        "page": 8,
+        "readyMs": 136.5,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 8,
+            "time": 3286,
+            "scrollTop": 7098
+          },
+          {
+            "name": "textLayerRender",
+            "page": 8,
+            "time": 3307.5,
+            "scrollTop": 7098
+          },
+          {
+            "name": "pageReady",
+            "page": 8,
+            "time": 3325.5,
+            "scrollTop": 7098
+          }
+        ]
+      },
+      {
+        "page": 16,
+        "readyMs": 107.30000001192093,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 16,
+            "time": 3415,
+            "scrollTop": 15210
+          },
+          {
+            "name": "textLayerRender",
+            "page": 16,
+            "time": 3431.5,
+            "scrollTop": 15210
+          },
+          {
+            "name": "pageReady",
+            "page": 16,
+            "time": 3449.5,
+            "scrollTop": 15210
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "canvasRender",
+        "page": 3,
+        "time": 2350.5,
+        "scrollTop": 2028
+      },
+      {
+        "name": "textLayerRender",
+        "page": 3,
+        "time": 2384.7000000178814,
+        "scrollTop": 2028
+      },
+      {
+        "name": "pageReady",
+        "page": 3,
+        "time": 2404.4000000059605,
+        "scrollTop": 3042
+      },
+      {
+        "name": "canvasRender",
+        "page": 7,
+        "time": 2497,
+        "scrollTop": 7098
+      },
+      {
+        "name": "textLayerRender",
+        "page": 7,
+        "time": 2514.100000023842,
+        "scrollTop": 7098
+      },
+      {
+        "name": "pageReady",
+        "page": 7,
+        "time": 2534.5,
+        "scrollTop": 8112
+      },
+      {
+        "name": "canvasRender",
+        "page": 14,
+        "time": 2630.600000023842,
+        "scrollTop": 14196
+      },
+      {
+        "name": "textLayerRender",
+        "page": 14,
+        "time": 2645.5,
+        "scrollTop": 14196
+      },
+      {
+        "name": "pageReady",
+        "page": 14,
+        "time": 2662,
+        "scrollTop": 15210
+      },
+      {
+        "name": "canvasRender",
+        "page": 19,
+        "time": 2731.9000000059605,
+        "scrollTop": 19266
+      },
+      {
+        "name": "textLayerRender",
+        "page": 19,
+        "time": 2749,
+        "scrollTop": 19266
+      },
+      {
+        "name": "pageReady",
+        "page": 19,
+        "time": 2767.7000000178814,
+        "scrollTop": 20280
+      },
+      {
+        "name": "canvasRender",
+        "page": 23,
+        "time": 2834.7000000178814,
+        "scrollTop": 23322
+      },
+      {
+        "name": "textLayerRender",
+        "page": 23,
+        "time": 2851.5,
+        "scrollTop": 23322
+      },
+      {
+        "name": "pageReady",
+        "page": 23,
+        "time": 2872,
+        "scrollTop": 23322
+      },
+      {
+        "name": "canvasRender",
+        "page": 24,
+        "time": 2903.7000000178814,
+        "scrollTop": 23322
+      },
+      {
+        "name": "textLayerRender",
+        "page": 24,
+        "time": 2937,
+        "scrollTop": 23322
+      },
+      {
+        "name": "pageReady",
+        "page": 24,
+        "time": 2961.4000000059605,
+        "scrollTop": 23322
+      },
+      {
+        "name": "canvasRender",
+        "page": 4,
+        "time": 3042.300000011921,
+        "scrollTop": 3042
+      },
+      {
+        "name": "textLayerRender",
+        "page": 4,
+        "time": 3067.300000011921,
+        "scrollTop": 3042
+      },
+      {
+        "name": "pageReady",
+        "page": 4,
+        "time": 3085.600000023842,
+        "scrollTop": 3042
+      },
+      {
+        "name": "canvasRender",
+        "page": 20,
+        "time": 3164.800000011921,
+        "scrollTop": 19266
+      },
+      {
+        "name": "textLayerRender",
+        "page": 20,
+        "time": 3183.7000000178814,
+        "scrollTop": 19266
+      },
+      {
+        "name": "pageReady",
+        "page": 20,
+        "time": 3200.600000023842,
+        "scrollTop": 19266
+      },
+      {
+        "name": "canvasRender",
+        "page": 8,
+        "time": 3286,
+        "scrollTop": 7098
+      },
+      {
+        "name": "textLayerRender",
+        "page": 8,
+        "time": 3307.5,
+        "scrollTop": 7098
+      },
+      {
+        "name": "pageReady",
+        "page": 8,
+        "time": 3325.5,
+        "scrollTop": 7098
+      },
+      {
+        "name": "canvasRender",
+        "page": 16,
+        "time": 3415,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 16,
+        "time": 3431.5,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 16,
+        "time": 3449.5,
+        "scrollTop": 15210
+      },
+      {
+        "name": "canvasRender",
+        "page": 15,
+        "time": 3481.9000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 15,
+        "time": 3511.5,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 15,
+        "time": 3529,
+        "scrollTop": 15210
+      },
+      {
+        "name": "canvasRender",
+        "page": 17,
+        "time": 3583.300000011921,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 17,
+        "time": 3618.4000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 17,
+        "time": 3636,
+        "scrollTop": 15210
+      }
+    ],
+    "LayoutCount": 100,
+    "LayoutDuration": 0.06264900000000001,
+    "ScriptDuration": 0.351504,
+    "TaskDuration": 1.340781
+  },
+  {
+    "counts": {
+      "pageRender": 216,
+      "canvasRender": 10,
+      "textLayerRender": 10,
+      "pageReady": 10
+    },
+    "frameP95Ms": 42.5,
+    "slowFrames": 10,
+    "frameCount": 40,
+    "longTasks": 0,
+    "longTaskMs": 0,
+    "jumps": [
+      {
+        "page": 24,
+        "readyMs": 78.80000001192093,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 24,
+            "time": 1451.7999999821186,
+            "scrollTop": 23322
+          },
+          {
+            "name": "textLayerRender",
+            "page": 24,
+            "time": 1465.699999988079,
+            "scrollTop": 23322
+          },
+          {
+            "name": "pageReady",
+            "page": 24,
+            "time": 1481.2999999821186,
+            "scrollTop": 23322
+          }
+        ]
+      },
+      {
+        "page": 4,
+        "readyMs": 85.30000001192093,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 4,
+            "time": 1535.7999999821186,
+            "scrollTop": 3042
+          },
+          {
+            "name": "textLayerRender",
+            "page": 4,
+            "time": 1551.0999999940395,
+            "scrollTop": 3042
+          },
+          {
+            "name": "pageReady",
+            "page": 4,
+            "time": 1567.199999988079,
+            "scrollTop": 3042
+          }
+        ]
+      },
+      {
+        "page": 20,
+        "readyMs": 79.7999999821186,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 20,
+            "time": 1619.7999999821186,
+            "scrollTop": 19266
+          },
+          {
+            "name": "textLayerRender",
+            "page": 20,
+            "time": 1632.7999999821186,
+            "scrollTop": 19266
+          },
+          {
+            "name": "pageReady",
+            "page": 20,
+            "time": 1648.0999999940395,
+            "scrollTop": 19266
+          }
+        ]
+      },
+      {
+        "page": 8,
+        "readyMs": 86,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 8,
+            "time": 1702.4000000059605,
+            "scrollTop": 7098
+          },
+          {
+            "name": "textLayerRender",
+            "page": 8,
+            "time": 1716.0999999940395,
+            "scrollTop": 7098
+          },
+          {
+            "name": "pageReady",
+            "page": 8,
+            "time": 1731.7999999821186,
+            "scrollTop": 7098
+          }
+        ]
+      },
+      {
+        "page": 16,
+        "readyMs": 20.5,
+        "events": []
+      }
+    ],
+    "events": [
+      {
+        "name": "canvasRender",
+        "page": 6,
+        "time": 1061.7999999821186,
+        "scrollTop": 6084
+      },
+      {
+        "name": "textLayerRender",
+        "page": 6,
+        "time": 1081.5,
+        "scrollTop": 6084
+      },
+      {
+        "name": "pageReady",
+        "page": 6,
+        "time": 1100.2999999821186,
+        "scrollTop": 7098
+      },
+      {
+        "name": "canvasRender",
+        "page": 11,
+        "time": 1171.2999999821186,
+        "scrollTop": 11154
+      },
+      {
+        "name": "textLayerRender",
+        "page": 11,
+        "time": 1186.5,
+        "scrollTop": 11154
+      },
+      {
+        "name": "pageReady",
+        "page": 11,
+        "time": 1203.5,
+        "scrollTop": 12168
+      },
+      {
+        "name": "canvasRender",
+        "page": 16,
+        "time": 1270.2999999821186,
+        "scrollTop": 16224
+      },
+      {
+        "name": "textLayerRender",
+        "page": 16,
+        "time": 1285.2999999821186,
+        "scrollTop": 16224
+      },
+      {
+        "name": "pageReady",
+        "page": 16,
+        "time": 1302.2999999821186,
+        "scrollTop": 17238
+      },
+      {
+        "name": "canvasRender",
+        "page": 21,
+        "time": 1370.5999999940395,
+        "scrollTop": 21294
+      },
+      {
+        "name": "textLayerRender",
+        "page": 21,
+        "time": 1384.199999988079,
+        "scrollTop": 21294
+      },
+      {
+        "name": "pageReady",
+        "page": 21,
+        "time": 1400.199999988079,
+        "scrollTop": 22308
+      },
+      {
+        "name": "canvasRender",
+        "page": 24,
+        "time": 1451.7999999821186,
+        "scrollTop": 23322
+      },
+      {
+        "name": "textLayerRender",
+        "page": 24,
+        "time": 1465.699999988079,
+        "scrollTop": 23322
+      },
+      {
+        "name": "pageReady",
+        "page": 24,
+        "time": 1481.2999999821186,
+        "scrollTop": 23322
+      },
+      {
+        "name": "canvasRender",
+        "page": 4,
+        "time": 1535.7999999821186,
+        "scrollTop": 3042
+      },
+      {
+        "name": "textLayerRender",
+        "page": 4,
+        "time": 1551.0999999940395,
+        "scrollTop": 3042
+      },
+      {
+        "name": "pageReady",
+        "page": 4,
+        "time": 1567.199999988079,
+        "scrollTop": 3042
+      },
+      {
+        "name": "canvasRender",
+        "page": 20,
+        "time": 1619.7999999821186,
+        "scrollTop": 19266
+      },
+      {
+        "name": "textLayerRender",
+        "page": 20,
+        "time": 1632.7999999821186,
+        "scrollTop": 19266
+      },
+      {
+        "name": "pageReady",
+        "page": 20,
+        "time": 1648.0999999940395,
+        "scrollTop": 19266
+      },
+      {
+        "name": "canvasRender",
+        "page": 8,
+        "time": 1702.4000000059605,
+        "scrollTop": 7098
+      },
+      {
+        "name": "textLayerRender",
+        "page": 8,
+        "time": 1716.0999999940395,
+        "scrollTop": 7098
+      },
+      {
+        "name": "pageReady",
+        "page": 8,
+        "time": 1731.7999999821186,
+        "scrollTop": 7098
+      },
+      {
+        "name": "canvasRender",
+        "page": 15,
+        "time": 1808.4000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 15,
+        "time": 1825.699999988079,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 15,
+        "time": 1841.5999999940395,
+        "scrollTop": 15210
+      },
+      {
+        "name": "canvasRender",
+        "page": 17,
+        "time": 1907.7999999821186,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 17,
+        "time": 1940.5999999940395,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 17,
+        "time": 1956,
+        "scrollTop": 15210
+      }
+    ],
+    "LayoutCount": 92,
+    "LayoutDuration": 0.05019799999999999,
+    "ScriptDuration": 0.279914,
+    "TaskDuration": 1.018858
+  },
+  {
+    "counts": {
+      "pageRender": 240,
+      "canvasRender": 12,
+      "textLayerRender": 12,
+      "pageReady": 12
+    },
+    "frameP95Ms": 51,
+    "slowFrames": 17,
+    "frameCount": 43,
+    "longTasks": 3,
+    "longTaskMs": 156,
+    "jumps": [
+      {
+        "page": 24,
+        "readyMs": 154.7999999821186,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 23,
+            "time": 1463.5,
+            "scrollTop": 23322
+          },
+          {
+            "name": "textLayerRender",
+            "page": 23,
+            "time": 1480.199999988079,
+            "scrollTop": 23322
+          },
+          {
+            "name": "pageReady",
+            "page": 23,
+            "time": 1497.199999988079,
+            "scrollTop": 23322
+          },
+          {
+            "name": "canvasRender",
+            "page": 24,
+            "time": 1550.5999999940395,
+            "scrollTop": 23322
+          },
+          {
+            "name": "textLayerRender",
+            "page": 24,
+            "time": 1568.4000000059605,
+            "scrollTop": 23322
+          },
+          {
+            "name": "pageReady",
+            "page": 24,
+            "time": 1585.199999988079,
+            "scrollTop": 23322
+          }
+        ]
+      },
+      {
+        "page": 4,
+        "readyMs": 119.59999999403954,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 4,
+            "time": 1657.699999988079,
+            "scrollTop": 3042
+          },
+          {
+            "name": "textLayerRender",
+            "page": 4,
+            "time": 1678.0999999940395,
+            "scrollTop": 3042
+          },
+          {
+            "name": "pageReady",
+            "page": 4,
+            "time": 1693.199999988079,
+            "scrollTop": 3042
+          }
+        ]
+      },
+      {
+        "page": 20,
+        "readyMs": 94.69999998807907,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 20,
+            "time": 1765.4000000059605,
+            "scrollTop": 19266
+          },
+          {
+            "name": "textLayerRender",
+            "page": 20,
+            "time": 1785.199999988079,
+            "scrollTop": 19266
+          },
+          {
+            "name": "pageReady",
+            "page": 20,
+            "time": 1802,
+            "scrollTop": 19266
+          }
+        ]
+      },
+      {
+        "page": 8,
+        "readyMs": 78.59999999403954,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 8,
+            "time": 1849.0999999940395,
+            "scrollTop": 7098
+          },
+          {
+            "name": "textLayerRender",
+            "page": 8,
+            "time": 1865.300000011921,
+            "scrollTop": 7098
+          },
+          {
+            "name": "pageReady",
+            "page": 8,
+            "time": 1881.699999988079,
+            "scrollTop": 7098
+          }
+        ]
+      },
+      {
+        "page": 16,
+        "readyMs": 109,
+        "events": [
+          {
+            "name": "canvasRender",
+            "page": 16,
+            "time": 1951.4000000059605,
+            "scrollTop": 15210
+          },
+          {
+            "name": "textLayerRender",
+            "page": 16,
+            "time": 1970.9000000059605,
+            "scrollTop": 15210
+          },
+          {
+            "name": "pageReady",
+            "page": 16,
+            "time": 1988.9000000059605,
+            "scrollTop": 15210
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "canvasRender",
+        "page": 3,
+        "time": 965.5,
+        "scrollTop": 2028
+      },
+      {
+        "name": "textLayerRender",
+        "page": 3,
+        "time": 1000.6999999880791,
+        "scrollTop": 2028
+      },
+      {
+        "name": "pageReady",
+        "page": 3,
+        "time": 1017,
+        "scrollTop": 3042
+      },
+      {
+        "name": "canvasRender",
+        "page": 8,
+        "time": 1132,
+        "scrollTop": 8112
+      },
+      {
+        "name": "textLayerRender",
+        "page": 8,
+        "time": 1150.300000011921,
+        "scrollTop": 8112
+      },
+      {
+        "name": "pageReady",
+        "page": 8,
+        "time": 1168.0999999940395,
+        "scrollTop": 9126
+      },
+      {
+        "name": "canvasRender",
+        "page": 13,
+        "time": 1248.300000011921,
+        "scrollTop": 13182
+      },
+      {
+        "name": "textLayerRender",
+        "page": 13,
+        "time": 1266.699999988079,
+        "scrollTop": 13182
+      },
+      {
+        "name": "pageReady",
+        "page": 13,
+        "time": 1286.300000011921,
+        "scrollTop": 14196
+      },
+      {
+        "name": "canvasRender",
+        "page": 18,
+        "time": 1362.699999988079,
+        "scrollTop": 18252
+      },
+      {
+        "name": "textLayerRender",
+        "page": 18,
+        "time": 1380.9000000059605,
+        "scrollTop": 18252
+      },
+      {
+        "name": "pageReady",
+        "page": 18,
+        "time": 1397.5999999940395,
+        "scrollTop": 19266
+      },
+      {
+        "name": "canvasRender",
+        "page": 23,
+        "time": 1463.5,
+        "scrollTop": 23322
+      },
+      {
+        "name": "textLayerRender",
+        "page": 23,
+        "time": 1480.199999988079,
+        "scrollTop": 23322
+      },
+      {
+        "name": "pageReady",
+        "page": 23,
+        "time": 1497.199999988079,
+        "scrollTop": 23322
+      },
+      {
+        "name": "canvasRender",
+        "page": 24,
+        "time": 1550.5999999940395,
+        "scrollTop": 23322
+      },
+      {
+        "name": "textLayerRender",
+        "page": 24,
+        "time": 1568.4000000059605,
+        "scrollTop": 23322
+      },
+      {
+        "name": "pageReady",
+        "page": 24,
+        "time": 1585.199999988079,
+        "scrollTop": 23322
+      },
+      {
+        "name": "canvasRender",
+        "page": 4,
+        "time": 1657.699999988079,
+        "scrollTop": 3042
+      },
+      {
+        "name": "textLayerRender",
+        "page": 4,
+        "time": 1678.0999999940395,
+        "scrollTop": 3042
+      },
+      {
+        "name": "pageReady",
+        "page": 4,
+        "time": 1693.199999988079,
+        "scrollTop": 3042
+      },
+      {
+        "name": "canvasRender",
+        "page": 20,
+        "time": 1765.4000000059605,
+        "scrollTop": 19266
+      },
+      {
+        "name": "textLayerRender",
+        "page": 20,
+        "time": 1785.199999988079,
+        "scrollTop": 19266
+      },
+      {
+        "name": "pageReady",
+        "page": 20,
+        "time": 1802,
+        "scrollTop": 19266
+      },
+      {
+        "name": "canvasRender",
+        "page": 8,
+        "time": 1849.0999999940395,
+        "scrollTop": 7098
+      },
+      {
+        "name": "textLayerRender",
+        "page": 8,
+        "time": 1865.300000011921,
+        "scrollTop": 7098
+      },
+      {
+        "name": "pageReady",
+        "page": 8,
+        "time": 1881.699999988079,
+        "scrollTop": 7098
+      },
+      {
+        "name": "canvasRender",
+        "page": 16,
+        "time": 1951.4000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 16,
+        "time": 1970.9000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 16,
+        "time": 1988.9000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "canvasRender",
+        "page": 15,
+        "time": 2021.5999999940395,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 15,
+        "time": 2049.9000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 15,
+        "time": 2068.9000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "canvasRender",
+        "page": 17,
+        "time": 2140.4000000059605,
+        "scrollTop": 15210
+      },
+      {
+        "name": "textLayerRender",
+        "page": 17,
+        "time": 2185.199999988079,
+        "scrollTop": 15210
+      },
+      {
+        "name": "pageReady",
+        "page": 17,
+        "time": 2202.5,
+        "scrollTop": 15210
+      }
+    ],
+    "LayoutCount": 101,
+    "LayoutDuration": 0.066936,
+    "ScriptDuration": 0.340639,
+    "TaskDuration": 1.260228
+  }
+]

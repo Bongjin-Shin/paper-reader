@@ -1,0 +1,54 @@
+#!/bin/sh
+set -eu
+
+# In particular, upgrade, failed-upgrade, abort-* and disappear MUST be no-ops.
+case "${1:-}" in remove|purge) ;; *) exit 0 ;; esac
+
+# Package removal is system-wide. Clean each account's app directories as that
+# account, never as root based on paths from a user's writable home directory.
+# getent, setpriv, env, sh and rm are supplied by Ubuntu Essential packages, so
+# this remains usable even after the app and its dependencies have been removed.
+getent passwd | (
+    failed=0
+    while IFS=: read -r account password uid gid gecos user_home user_shell; do
+        case "$user_home" in /|/nonexistent|/dev/null|'') continue ;; /*) ;; *) continue ;; esac
+        [ -d "$user_home" ] || continue
+        if ! setpriv --reuid="$uid" --regid="$gid" --clear-groups \
+            /usr/bin/env -i PATH=/usr/bin:/bin /bin/sh -s -- "$user_home" <<'CLEANUP'
+set -eu
+user_home=$1
+app_id=com.papervocabulary.reader
+default_data="$user_home/.local/share/$app_id"
+registry="$default_data/uninstall-paths"
+
+remove_app_directory() {
+    target=$1
+    # Only absolute paths ending in this exact application ID are accepted.
+    # Reject traversal rather than interpreting a user-written registry as code.
+    case "$target" in /*/"$app_id") ;; *) return 1 ;; esac
+    case "$target/" in *'/../'*|*'/./'*|*'//'*) return 1 ;; esac
+    # rm removes leaf and nested symlinks themselves, never their destinations.
+    rm -rf -- "$target"
+}
+
+# Custom XDG locations registered by the app. Keep the registry until all other
+# cleanup has succeeded, so a failed postrm can be retried by the package manager.
+if [ -d "$registry" ] && [ ! -L "$registry" ]; then
+    for entry in "$registry"/*; do
+        case "$entry" in *.tmp) continue ;; esac
+        [ -f "$entry" ] && [ ! -L "$entry" ] || continue
+        IFS= read -r target < "$entry"
+        [ "$target" = "$default_data" ] || remove_app_directory "$target"
+    done
+fi
+remove_app_directory "$user_home/.config/$app_id"
+remove_app_directory "$user_home/.cache/$app_id"
+remove_app_directory "$default_data"
+CLEANUP
+        then
+            echo "Paper Vocabulary: $account 사용자의 앱 데이터 정리에 실패했습니다. 제거를 다시 시도해 주세요." >&2
+            failed=1
+        fi
+    done
+    exit "$failed"
+)

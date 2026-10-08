@@ -1,0 +1,68 @@
+[
+  {
+    "counts": {
+      "appRender": 2,
+      "pageRender": 92,
+      "highlightTransform": 1152,
+      "canvasRender": 10,
+      "textLayerRender": 10,
+      "pageReady": 10
+    },
+    "peakCanvases": 9,
+    "peakPixels": 27264600,
+    "frameP95Ms": 30.599999994039536,
+    "slowFrames": 25,
+    "longTasks": 0,
+    "longTaskMs": 0,
+    "LayoutCount": 115,
+    "RecalcStyleCount": 113,
+    "LayoutDuration": 0.070946,
+    "RecalcStyleDuration": 0.044911999999999994,
+    "ScriptDuration": 0.40308400000000005,
+    "TaskDuration": 3.224833
+  },
+  {
+    "counts": {
+      "appRender": 2,
+      "pageRender": 56,
+      "highlightTransform": 576,
+      "canvasRender": 4,
+      "textLayerRender": 4,
+      "pageReady": 4
+    },
+    "peakCanvases": 9,
+    "peakPixels": 27264600,
+    "frameP95Ms": 22.30000001192093,
+    "slowFrames": 11,
+    "longTasks": 0,
+    "longTaskMs": 0,
+    "LayoutCount": 91,
+    "RecalcStyleCount": 89,
+    "LayoutDuration": 0.049030000000000004,
+    "RecalcStyleDuration": 0.028568999999999997,
+    "ScriptDuration": 0.241684,
+    "TaskDuration": 2.6589910000000003
+  },
+  {
+    "counts": {
+      "appRender": 2,
+      "pageRender": 56,
+      "highlightTransform": 576,
+      "canvasRender": 4,
+      "textLayerRender": 4,
+      "pageReady": 4
+    },
+    "peakCanvases": 9,
+    "peakPixels": 27264600,
+    "frameP95Ms": 23,
+    "slowFrames": 10,
+    "longTasks": 0,
+    "longTaskMs": 0,
+    "LayoutCount": 91,
+    "RecalcStyleCount": 89,
+    "LayoutDuration": 0.05248999999999998,
+    "RecalcStyleDuration": 0.028660999999999992,
+    "ScriptDuration": 0.23056599999999994,
+    "TaskDuration": 2.6260190000000003
+  }
+]
