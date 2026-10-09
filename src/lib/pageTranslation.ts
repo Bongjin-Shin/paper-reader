@@ -1,10 +1,11 @@
 import { TextLayer, Util, type PDFDocumentProxy } from 'pdfjs-dist';
 import type { SourceSentence, EquationSource } from '../types';
-import { mathFont, mathGroups, textBlocks, clipInlineEquation, separateFootnotes, lineNumberRuns } from './translationLayout';
+import { mathFont, mathGroups, textBlocks, clipInlineEquation, lineNumberRuns } from './translationLayout';
+import { readingRegions } from './translationRegions';
 import { rectToPdf } from './selection';
 
 export interface TextRun { text: string; left: number; top: number; right: number; bottom: number; baseline?: number; fontSize?: number; inkTop?: number; inkBottom?: number; math?: boolean; bold?: boolean; italic?: boolean }
-export interface Line { runs: number[]; left: number; top: number; right: number; bottom: number; column: number }
+export interface Line { runs: number[]; left: number; top: number; right: number; bottom: number; column: number; kind?: NonNullable<SourceSentence['layout']>['kind']; region?: number }
 const median = (values: number[]) => { const sorted = [...values].sort((a, b) => a - b); return sorted[Math.floor(sorted.length / 2)] ?? 0; };
 
 /** Find repeated whitespace BETWEEN columns before joining font runs into lines.
@@ -24,7 +25,11 @@ export function orderedLines(runs: TextRun[]): Line[] {
   for (const i of order) {
     const run = runs[i];
     if (!run.math && /^[A-Z]$/.test(run.text) && (run.fontSize ?? height) > height * 1.8) { dropCaps.push(i); continue; }
-    if (run.baseline !== undefined && (((run.fontSize ?? height) < height * .83 && (run.text.trim().length <= 3 || run.math))
+    const raised = run.text.trim().length <= 3 && runs.some(other => other !== run && /[A-Za-z]{3}/.test(other.text)
+      && (other.fontSize ?? height) > (run.fontSize ?? height) * 1.18 && other.baseline !== undefined && run.baseline !== undefined
+      && other.baseline - run.baseline > height * .15 && other.baseline - run.baseline < height * .9
+      && Math.min(Math.abs(other.right-run.left), Math.abs(run.right-other.left)) < height * 1.2);
+    if (run.baseline !== undefined && (raised || ((run.fontSize ?? height) < height * .83 && (run.text.trim().length <= 3 || run.math))
       || /^[˜~ˆ^˙]$/.test(run.text.trim()) || (run.math && /^[^\p{L}\p{N}]+$/u.test(run.text)))) { scripts.push(i); continue; }
     const row = [...rows].reverse().find(r => run.baseline !== undefined
       ? Math.abs(baseline(r) - run.baseline) < Math.max(height,run.fontSize ?? height,...r.runs.map(i=>runs[i].fontSize ?? height)) * .25
@@ -65,8 +70,17 @@ export function orderedLines(runs: TextRun[]): Line[] {
       if (left.length && right.length && x - runs[left[0]].left > width * .15 && runs[right.at(-1)!].right - x > width * .15
         && runs[right[0]].left - runs[left.at(-1)!].right >= height * .8 && prose(left) && prose(right)) pairs++;
     }
-    const score = pairs - crossing * .08;
-    if (pairs >= 2 && score > best) { best = score; split = x; }
+    // Floating figures can leave too few coincident baselines to prove a gutter.
+    // Repeated column starts also establish it when each side has several prose
+    // lines, even if the caption uses a smaller font or different line spacing.
+    const starts = (side: 'left' | 'right') => rows.filter(row => !row.runs.some(i => runs[i].left < x && runs[i].right > x))
+      .map(row => row.runs.filter(i => side === 'left' ? runs[i].right <= x : runs[i].left >= x))
+      .filter(ids => ids.some(i => !runs[i].math && (runs[i].fontSize ?? height) >= height * .83 && /[A-Za-z]{4}/.test(runs[i].text)))
+      .map(ids => runs[ids[0]].left);
+    const aligned = (xs: number[]) => Math.max(0, ...xs.map(start => xs.filter(v => Math.abs(v-start) < height * 1.5).length));
+    const support = pairs >= 2 ? pairs : Math.min(aligned(starts('left')), aligned(starts('right')));
+    const score = (pairs >= 2 ? pairs : support >= 3 ? support * .6 : 0) - crossing * .08;
+    if (score > best) { best = score; split = x; }
   }
   if (!split) return rows;
   const result: Line[] = [], band: Line[] = [];
@@ -137,14 +151,7 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
     const numbers = lineNumberRuns(runs);
     for (const index of [...numbers].sort((a, b) => b - a)) { runs.splice(index, 1); nodes.splice(index, 1); }
     const bodySize = median(runs.filter(r => !r.math && /[A-Za-z]{3}/.test(r.text)).map(r => r.fontSize ?? 10)) || 10;
-    let lines = separateFootnotes(orderedLines(runs),runs,viewport.height);
-    // A bottom figure caption must not interrupt a sentence continuing at the
-    // top of the right column. Keep that bottom figure area after both columns.
-    const caption = lines.find(l => l.column === 1 && l.top > viewport.height * .64
-      && /^(?:Fig(?:ure)?\.?|Table)\s*\d/.test(l.runs.map(i=>runs[i].text).join(' ')));
-    if (caption && lines.some(l=>l.column===2 && l.top<caption.top)) {
-      lines = [...lines.filter(l=>l.top<caption.top), ...lines.filter(l=>l.top>=caption.top).sort((a,b)=>a.top-b.top || a.left-b.left)];
-    }
+    const lines = readingRegions(orderedLines(runs), runs, viewport.height);
     const blocks = textBlocks(lines, runs);
     const sentences: SourceSentence[] = [];
     const origin = host.getBoundingClientRect();
@@ -160,7 +167,9 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
       let box = { left: Math.min(...boxes.map(r=>r.left))-1, right: Math.max(...boxes.map(r=>r.right))+1,
         top: Math.min(...boxes.map(r=>r.top))-2, bottom: Math.max(...boxes.map(r=>r.bottom))+2 };
       if (line) box = clipInlineEquation(box,line,runs);
-      return { pageNumber, token: `[[PV_MATH_${mathId++}]]`, text: ids.map(i=>runs[i].text).join(' ').trim(), rect: rectToPdf(box as DOMRect,origin,viewport), fontSize: (median(ids.map(i=>runs[i].fontSize ?? 10)) || 10) / page.userUnit };
+      const round = (n: number) => Math.round(n * 100) / 100;
+      return { pageNumber, token: `[[PV_MATH_${mathId++}]]`, text: ids.map(i=>runs[i].text).join(' ').trim(), rect: rectToPdf(box as DOMRect,origin,viewport), fontSize: (median(ids.map(i=>runs[i].fontSize ?? 10)) || 10) / page.userUnit,
+        glyphs: ids.map(i => ({ text: runs[i].text, x: round(runs[i].left - box.left), y: round((runs[i].baseline ?? runs[i].bottom) - box.top), size: round(runs[i].fontSize ?? 10) })) };
     };
     for (const [paragraph, block] of blocks.entries()) {
       const prose = block.lines.flatMap(l => l.runs.map(i => runs[i])).filter(r => !r.math);

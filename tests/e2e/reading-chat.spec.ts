@@ -46,7 +46,7 @@ test('chat failure retains the question for retry and closing during a request r
   await expect(page.getByLabel('논문 질문')).toHaveValue('');
 });
 
-test('cross-page sentence is complete in both pages and continuous scroll preserves DOM content', async ({ page }) => {
+test('cross-page sentence is complete in both pages while their scroll positions remain independent', async ({ page }) => {
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica);
   const a = doc.addPage([612, 792]), b = doc.addPage([612, 792]);
   a.drawText('A complete sentence.', { x: 40, y: 720, font, size: 12 });
@@ -59,7 +59,7 @@ test('cross-page sentence is complete in both pages and continuous scroll preser
   await page.evaluate(() => { (window as any).__firstSentence = document.querySelector('.translated-sentence'); });
   const before = await page.locator('.translation-content').evaluate(el => el.scrollTop);
   await page.locator('.reader').evaluate(el => { el.scrollTop += 300; });
-  await expect.poll(() => page.locator('.translation-content').evaluate(el => el.scrollTop)).toBeGreaterThan(before + 50);
+  await expect.poll(() => page.locator('.translation-content').evaluate(el => el.scrollTop)).toBe(before);
   expect(await page.evaluate(() => (window as any).__firstSentence.isConnected)).toBe(true);
   await page.getByRole('button', { name: '다음 번역 페이지' }).click();
   const readingPosition = await page.locator('.reader').evaluate(el => el.scrollTop);
@@ -79,7 +79,7 @@ test('cross-page sentence is complete in both pages and continuous scroll preser
   const pane = (await page.locator('.translation-content').boundingBox())!;
   await page.mouse.move(pane.x + pane.width / 2, pane.y + pane.height / 2);
   await page.mouse.wheel(0, -180);
-  await expect.poll(() => page.locator('.reader').evaluate(el => el.scrollTop)).toBeLessThan(beforeReverse - 40);
+  await expect.poll(() => page.locator('.reader').evaluate(el => el.scrollTop)).toBe(beforeReverse);
 });
 
 test('translation resize leaves room for the PDF while chat is open', async ({ page }) => {

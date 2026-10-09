@@ -271,6 +271,7 @@ async fn full_page_translation_uses_existing_subscription_transport_and_cache() 
     db.set_initial_credit("5").unwrap();
     let db = Mutex::new(db);
     let request = PageTranslationRequest {
+        force: false,
         paper_id: "paper".into(),
         page_number: 1,
         sentences: vec![SourceSentence {
@@ -314,6 +315,7 @@ fn subscription_stream_emits_only_matching_final_message_before_completed_turn()
     let dir = tempfile::tempdir().unwrap();
     let client = client(dir.path(), "page-stream-gated", true);
     let request = PageTranslationRequest {
+        force: false,
         paper_id: "paper".into(),
         page_number: 1,
         sentences: (0..2)
@@ -359,6 +361,7 @@ fn subscription_stream_partial_output_cannot_turn_a_failed_turn_into_success() {
     let dir = tempfile::tempdir().unwrap();
     let client = client(dir.path(), "page-stream-fail", true);
     let request = PageTranslationRequest {
+        force: false,
         paper_id: "paper".into(),
         page_number: 1,
         sentences: vec![SourceSentence {

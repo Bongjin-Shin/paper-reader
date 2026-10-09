@@ -93,8 +93,8 @@ export const errorMessage = (error: unknown): string => error instanceof Error ?
 export const getPageTranslation = (paperId: string, pageNumber: number) =>
   invoke<import('../types').PageTranslation | null>('get_page_translation', { paperId, pageNumber });
 export const translatePage = (request: import('../types').PageTranslationRequest,
-  progress?: (rows: { id: number; translation: string }[]) => void) => {
-  const onProgress = new Channel<{ id: number; translation: string }[]>();
+  progress?: (rows: { id: number; translation: string; equations?: import('../types').RenderedEquation[] }[]) => void) => {
+  const onProgress = new Channel<{ id: number; translation: string; equations?: import('../types').RenderedEquation[] }[]>();
   onProgress.onmessage = rows => progress?.(rows);
   return invoke<import('../types').PageTranslation>('translate_page', { request, onProgress });
 };

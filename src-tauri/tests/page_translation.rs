@@ -11,6 +11,7 @@ use serde_json::json;
 use std::{path::Path, sync::Mutex};
 fn request() -> PageTranslationRequest {
     PageTranslationRequest {
+        force: false,
         paper_id: "paper".into(),
         page_number: 1,
         sentences: vec![
@@ -298,7 +299,7 @@ async fn legacy_layout_cache_is_kept_but_not_reused_until_an_explicit_translatio
         sql.query_row::<i64, _, _>("SELECT layout_version FROM page_translations", [], |r| r
             .get(0))
             .unwrap(),
-        6
+        7
     );
 }
 
@@ -318,6 +319,7 @@ async fn layout_and_original_equations_persist_locally_without_sending_coordinat
         paragraph: 0,
         kind: LayoutKind::Paragraph,
         math: vec![EquationSource {
+            glyphs: vec![],
             page_number: None,
             token: "[[PV_MATH_0]]".into(),
             text: "E = mc2".into(),
@@ -331,7 +333,7 @@ async fn layout_and_original_equations_persist_locally_without_sending_coordinat
     assert_eq!(input["sentences"][0]["equations"][0]["text"], "E = mc2");
     assert!(input["sentences"][0]["equations"][0].get("rect").is_none());
     let mut answer = response(AiProvider::Api);
-    answer.text=json!({"sentences":[{"id":0,"translation":"이 문장에서 [[PV_MATH_0]]을 사용합니다."},{"id":1,"translation":"다음 문장입니다."}]}).to_string();
+    answer.text=json!({"sentences":[{"id":0,"translation":"이 문장에서 [[PV_MATH_0]]을 사용합니다.","equations":[{"token":"[[PV_MATH_0]]","latex":"E=mc^2"}]},{"id":1,"translation":"다음 문장입니다."}]}).to_string();
     let output = translate_page(&db, &req, || async { Ok(answer) })
         .await
         .unwrap();
@@ -358,6 +360,7 @@ async fn lost_or_duplicated_formula_markers_never_save_or_charge_and_invalid_geo
         paragraph: 0,
         kind: LayoutKind::Equation,
         math: vec![EquationSource {
+            glyphs: vec![],
             page_number: None,
             token: "[[PV_MATH_0]]".into(),
             text: "y = 1/n".into(),
@@ -400,7 +403,7 @@ async fn old_line_based_cache_is_not_reused_for_sentence_layout() {
     .await
     .unwrap();
     let sql = rusqlite::Connection::open(&path).unwrap();
-    sql.execute("UPDATE page_translations SET layout_version=3", [])
+    sql.execute("UPDATE page_translations SET layout_version=6", [])
         .unwrap();
     assert!(db
         .lock()
@@ -444,4 +447,69 @@ async fn repeated_cross_page_sentence_keeps_exact_translation_regardless_of_comp
         first.sentences[1].translation,
         saved.sentences[1].translation
     );
+}
+
+#[tokio::test]
+async fn explicit_retranslation_bypasses_all_caches_and_updates_duplicate_sentences_after_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("data.db");
+    let db = Database::open(&path).unwrap(); register(&db);
+    let db = Mutex::new(db);
+    let original = translate_page(&db, &request(), || async { Ok(response(AiProvider::Api)) }).await.unwrap();
+    let mut next = request(); next.page_number = 2;
+    next.sentences[1].text = "Unrelated next-page sentence.".into();
+    translate_page(&db, &next, || async { Ok(response(AiProvider::Api)) }).await.unwrap();
+    let mut forced = request(); forced.force = true;
+    let prior_cost = db.lock().unwrap().usage_summary().unwrap().total_cost_usd;
+    assert!(translate_page(&db, &forced, || async { Err("offline".into()) }).await.is_err());
+    assert_eq!(db.lock().unwrap().usage_summary().unwrap().total_cost_usd, prior_cost);
+    assert_eq!(db.lock().unwrap().page_translation("paper", 1).unwrap().unwrap().sentences[0].translation, original.sentences[0].translation);
+    let mut fresh = response(AiProvider::Api);
+    fresh.response_id = Some("retranslation-response".into());
+    fresh.text = json!({"sentences":[{"id":0,"translation":"새 번역입니다.","equations":[]},{"id":1,"translation":"수정한 문장입니다.","equations":[]}]}).to_string();
+    let updated = translate_page(&db, &forced, || async { Ok(fresh) }).await.unwrap();
+    assert_eq!(updated.sentences[0].translation, "새 번역입니다.");
+    assert!(db.lock().unwrap().usage_summary().unwrap().total_cost_usd > prior_cost);
+    drop(db);
+    let db = Mutex::new(Database::open(&path).unwrap());
+    let first = db.lock().unwrap().page_translation("paper", 1).unwrap().unwrap();
+    let second = db.lock().unwrap().page_translation("paper", 2).unwrap().unwrap();
+    assert_eq!(first.sentences[0].translation, "새 번역입니다.");
+    assert_eq!(second.sentences[0].translation, first.sentences[0].translation);
+    assert_eq!(second.sentences[1].translation, "다음 문장입니다.");
+    translate_page(&db, &next, || async { panic!("Adjacent page should still be cached") }).await.unwrap();
+    assert_eq!(db.lock().unwrap().papers().unwrap().len(), 1);
+    assert!(db.lock().unwrap().vocabulary("", None).unwrap().is_empty());
+}
+
+#[test]
+fn latex_is_required_per_formula_and_streamed_as_a_complete_sentence() {
+    use paper_vocabulary_lib::page_translation::{EquationGlyph, EquationSource, LayoutKind, SentenceLayout, SentenceStream};
+    let mut req = request();
+    req.sentences[0].text = "Energy is [[PV_MATH_1000]].".into();
+    req.sentences[0].layout = Some(SentenceLayout { paragraph: 0, kind: LayoutKind::Paragraph, sources: vec![], typography: None,
+        math: vec![EquationSource { token: "[[PV_MATH_1000]]".into(), text: "E = mc 2".into(), rect: [10., 20., 90., 40.],
+            font_size: 12., page_number: Some(1), glyphs: vec![EquationGlyph { text: "2".into(), x: 33., y: 6., size: 7. }] }] });
+    req.validate().unwrap();
+    let input: serde_json::Value = serde_json::from_str(request_body(&req)["input"].as_str().unwrap()).unwrap();
+    assert_eq!(input["sentences"][0]["kind"], "paragraph");
+    assert_eq!(input["sentences"][0]["equations"][0]["glyphs"][0]["y"], 6.);
+    assert!(input["sentences"][0]["equations"][0].get("rect").is_none());
+    let equations = json!([{"token":"[[PV_MATH_1000]]","latex":"E=mc^2"}]);
+    let text = json!({"sentences":[{"id":0,"translation":"에너지는 [[PV_MATH_1000]]입니다.","equations":equations}, {"id":1,"translation":"다음 문장입니다.","equations":[]}]}).to_string();
+    let parsed = parse_result(&req, &text).unwrap();
+    assert_eq!(parsed.sentences[0].equations[0].latex, "E=mc^2");
+    let mut stream = SentenceStream::default(); let mut rows = vec![];
+    for ch in text.chars() { rows.extend(stream.push(&ch.to_string(), 2)); }
+    assert_eq!(rows[0].equations, parsed.sentences[0].equations);
+    for bad in [json!([]), json!([{"token":"[[PV_MATH_9999]]","latex":"x"}]), json!([{"token":"[[PV_MATH_1000]]","latex":""}]),
+        json!([{"token":"[[PV_MATH_1000]]","latex":"x"},{"token":"[[PV_MATH_1000]]","latex":"y"}])] {
+        let mut value: serde_json::Value = serde_json::from_str(&text).unwrap(); value["sentences"][0]["equations"] = bad;
+        assert!(parse_result(&req, &value.to_string()).is_err());
+    }
+    let mut value: serde_json::Value = serde_json::from_str(&text).unwrap();
+    value["sentences"][1]["translation"] = json!("Invented [[PV_MATH_9999]]");
+    assert!(parse_result(&req, &value.to_string()).is_err());
+    req.sentences[0].layout.as_mut().unwrap().math[0].glyphs[0].y = f64::NAN;
+    assert!(req.validate().is_err());
 }

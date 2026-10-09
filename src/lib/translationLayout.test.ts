@@ -1,7 +1,8 @@
 import {expect,it,vi} from 'vitest';
 vi.mock('pdfjs-dist',()=>({TextLayer:class{},Util:{}}));
 import {orderedLines,sentenceRanges,type TextRun} from './pageTranslation';
-import {textBlocks,mathGroups,isEquation,clipInlineEquation,separateFootnotes,lineNumberRuns} from './translationLayout';
+import {textBlocks,mathGroups,isEquation,clipInlineEquation,lineNumberRuns} from './translationLayout';
+import {readingRegions} from './translationRegions';
 const run=(text:string,x:number,y:number,size=12,extra:Partial<TextRun>={}):TextRun=>({text,left:x,right:x+text.length*5,top:y-size*.8,bottom:y+size*.2,fontSize:size,baseline:y,...extra});
 it('keeps unfinished prose across leading and font-height changes, splitting only complete sentences',()=>{
  const runs=[run('This long sentence is wrapped',30,20),run('onto a differently spaced line',30,47,12,{top:31,bottom:50}),run('and ends here. Next sentence.',30,74)];
@@ -47,7 +48,7 @@ it('keeps small footnote lines in reading order without inserting them into a cr
  const runs=[run('The sentence continues',30,530,10),run('at the next column.',330,100,10),run('Other body line.',330,115,10),
   run('Manuscript received on a certain date.',30,580,8),run('18 April 2023. Notes continue.',30,590,8)];
  const lines=runs.map((r,i)=>({runs:[i],left:r.left,right:r.right,top:r.top,bottom:r.bottom,column:i===1||i===2?2:1}));
- const ordered=separateFootnotes([lines[0],lines[3],lines[4],lines[1],lines[2]],runs,792);
+ const ordered=readingRegions([lines[0],lines[3],lines[4],lines[1],lines[2]],runs,792);
  expect(ordered.flatMap(l=>l.runs)).toEqual([0,1,2,3,4]);
  const body=textBlocks(ordered,runs)[0];expect(body.lines.flatMap(l=>l.runs)).toEqual([0,1,2]);
  expect(sentenceRanges(body.lines.map(l=>l.runs.map(i=>runs[i].text).join('')).join('\n'))[0].text).toBe('The sentence continues at the next column.');
@@ -64,4 +65,12 @@ it('separates same-size manuscript headings and removes a sequential line-number
 it('retains numeric data which is not a sequential manuscript gutter',()=>{
  const runs=[run('Heading',10,10),...Array.from({length:6},(_,i)=>[run(String(i+1),30,40+i*20),run('Table entry',70,40+i*20)]).flat()];
  expect(lineNumberRuns(runs).size).toBe(0);
+});
+
+it('keeps affiliation braces and author daggers as text while retaining math in notes', () => {
+ const runs = [run('{',30,20,10,{math:true}),run('author@email.edu',36,20),run('}',115,20,10,{math:true}),
+  run('dagger',140,20),run('†',175,17,7,{math:true}),run('We use ',30,40),run('x = 2',75,40,10,{math:true})];
+ const lines=orderedLines(runs);
+ expect(mathGroups(lines[0],runs)).toEqual([]);
+ expect(mathGroups(lines[1],runs)).toEqual([[6]]);
 });

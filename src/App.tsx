@@ -7,6 +7,7 @@ import { TranslationPane } from './components/TranslationPane';
 import { PaperChat } from './components/PaperChat';
 import { PageTranslationPanel } from './components/PageTranslationPanel';
 import { usePageTranslation } from './lib/usePageTranslation';
+import { usePaperClipboard } from './lib/usePaperClipboard';
 import { PdfPages } from './components/PdfPages';
 import { WordBubble, type BubbleState } from './components/WordBubble';
 import { AiConnection } from './components/AiConnection';
@@ -104,6 +105,7 @@ export default function App() {
   }, [syncSelection]);
   const zoom = useReaderZoom(scrollRef, pdf, onZoomSettled);
   const translation = usePageTranslation(pdf, paper?.id, scrollRef, view === 'reader', () => setUsageRevision(n => n + 1));
+  usePaperClipboard(scrollRef, translation, view === 'reader');
   const { scale } = zoom;
   scaleRef.current = scale;
 

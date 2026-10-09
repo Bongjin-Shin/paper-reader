@@ -5,6 +5,7 @@ import { isSingleEnglishWord, pdfToStyle, readDragSelection, readWordSelection, 
 import { highlightCss } from '../lib/highlights';
 import type { Highlight, WordSelection, PdfRect } from '../types';
 import { canvasSize, type PageRenderCache } from '../lib/pageRendering';
+import { registerPdfCopyLayer } from '../lib/pdfClipboard';
 
 interface Props {
   pdf: PDFDocumentProxy;
@@ -146,6 +147,7 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
         // own rotation transform or remeasuring every glyph at each zoom stop.
         text.style.transform = `scale(${renderScale / textScale})`;
         registerTextLayer(layer, viewport);
+        if (textLayer) registerPdfCopyLayer(layer, page, content, textLayer.textDivs);
         if (!existing) textHostRef.current!.replaceChildren(text);
         if (old) { old.canvas.width = old.canvas.height = 0; }
         committed = true;

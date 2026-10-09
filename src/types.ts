@@ -108,14 +108,16 @@ export interface SavedHighlight {
   explanation: string | null;
 }
 
-export interface EquationSource { token: string; text: string; rect: PdfRect; fontSize: number; pageNumber?: number }
+export interface EquationGlyph { text: string; x: number; y: number; size: number }
+export interface EquationSource { token: string; text: string; rect: PdfRect; fontSize: number; pageNumber?: number; glyphs?: EquationGlyph[] }
+export interface RenderedEquation { token: string; latex: string }
 export interface SentenceTypography { fontScale: number; bold: boolean; italic: boolean }
-export interface SentenceLayout { paragraph: number; kind: 'paragraph' | 'heading' | 'equation'; math: EquationSource[];
+export interface SentenceLayout { paragraph: number; kind: 'paragraph' | 'heading' | 'equation' | 'caption' | 'footnote' | 'header' | 'footer'; math: EquationSource[];
   sources?: TranslationMark[]; typography?: SentenceTypography }
 export interface SourceSentence { id: number; text: string; rects: PdfRect[]; layout?: SentenceLayout }
-export interface TranslatedSentence extends SourceSentence { translation: string }
+export interface TranslatedSentence extends SourceSentence { translation: string; equations?: RenderedEquation[] }
 export interface PageTranslation { pageNumber: number; sentences: TranslatedSentence[] }
-export interface PageTranslationRequest { paperId: string; pageNumber: number; sentences: SourceSentence[] }
+export interface PageTranslationRequest { paperId: string; pageNumber: number; sentences: SourceSentence[]; force?: boolean }
 export interface TranslationMark { pageNumber: number; rects: PdfRect[] }
 
 export type ChatEvent = { type: 'ready' | 'thinking' } | { type: 'answer'; text: string } | { type: 'accepted'; question: string };

@@ -25,32 +25,39 @@ export function usePageTranslation(pdf: PDFDocumentProxy | null, paperId: string
   const usage = useRef(onUsage); usage.current = onUsage;
   const refresh = useCallback(() => { if (current.current === store) update(n => n + 1); }, [store]);
 
-  const load = useCallback(async (number: number, translate: boolean) => {
+  const load = useCallback(async (number: number, translate: boolean, force = false) => {
     if (!store.pdf || !store.paperId) return;
     let entry = store.entries.get(number);
     if (!entry) { entry = { data: null, checked: false, error: '', phase: '' }; store.entries.set(number, entry); }
+    if (entry.job && force) return;
     while (entry.job) { await entry.job; if (!translate || entry.data || current.current !== store) return; }
-    if (entry.data || (!translate && entry.checked)) return;
+    if (!force && (entry.data || (!translate && entry.checked))) return;
     const target = entry;
     target.error = ''; target.phase = '저장된 번역 확인 중…';
     const job = async () => {
       let called = false;
       try {
         if (!target.checked) { target.data = await getPageTranslation(store.paperId!, number); target.checked = true; }
-        if (target.data || !translate || current.current !== store) return;
+        if ((!force && target.data) || !translate || current.current !== store) return;
         target.phase = '원문 문장을 읽는 중…'; refresh();
-        const sentences = await extractPageWithContinuations(store.pdf!, number);
+        const sentences = await extractPageWithContinuations(store.pdf!, number, force);
         if (current.current !== store) return;
         target.phase = '한국어로 번역 중…'; refresh(); called = true;
         target.preview = { pageNumber: number, sentences: [] };
-        target.data = await translatePage({ paperId: store.paperId!, pageNumber: number, sentences }, rows => {
+        target.data = await translatePage({ paperId: store.paperId!, pageNumber: number, sentences, force }, rows => {
           if (current.current !== store || !target.phase) return;
           const translated = target.preview!.sentences;
           for (const row of rows) {
-            if (row.id === translated.length && sentences[row.id] && row.translation.trim()) translated.push({ ...sentences[row.id], translation: row.translation });
+            if (row.id === translated.length && sentences[row.id] && row.translation.trim()) translated.push({ ...sentences[row.id], translation: row.translation, equations: row.equations });
           }
           target.phase = `한국어로 번역 중… ${translated.length}/${sentences.length} 문장`; refresh();
         });
+        if (force && current.current === store) {
+          setHovered(null); setPinned(null);
+          await Promise.all([...store.entries].filter(([n, e]) => n !== number && e.data && !e.job).map(async ([n, e]) => {
+            try { e.data = await getPageTranslation(store.paperId!, n) ?? e.data; } catch { /* Keep the last good page if a refresh fails. */ }
+          }));
+        }
       } catch (error) { target.error = errorMessage(error); }
       finally { target.preview = undefined; target.phase = ''; target.job = undefined; refresh(); if (called) usage.current(); }
     };

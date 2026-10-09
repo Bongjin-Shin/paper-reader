@@ -33,7 +33,8 @@ export function joinContinuation(parts: SourceSentence[], local: SourceSentence)
     math: parts.flatMap(p => p.layout?.math ?? []), sources: parts.flatMap(p => p.layout?.sources ?? []) } };
 }
 
-export async function extractPageWithContinuations(pdf: PDFDocumentProxy, number: number) {
+export async function extractPageWithContinuations(pdf: PDFDocumentProxy, number: number, fresh = false) {
+  if (fresh) cache.delete(pdf);
   const local = await read(pdf, number), edges = bodyEdges(local);
   const output = [...local];
   for (const sentence of new Set([edges.first, edges.last])) {

@@ -23,7 +23,7 @@ test('translates only the current page, caches it across restart and never adds 
   expect(await calls(page)).toBe(1);
   await panel(page).getByRole('button', { name: '이 페이지 번역' }).click();
   await expect(panel(page)).toContainText('한국어 번역 2-1'); expect(await calls(page)).toBe(2);
-  await page.locator('.reader').evaluate(el => { el.scrollTop = 0; });
+  await panel(page).getByRole('button', { name: '이전 번역 페이지' }).click();
   await expect(panel(page)).toContainText('1 / 2 페이지');
   await expect(panel(page)).toContainText('한국어 번역 1-1'); expect(await calls(page)).toBe(2);
   await page.reload(); await open(page); await translate(page); expect(await calls(page)).toBe(0);
@@ -121,16 +121,15 @@ test('reopening during a slow cache read serializes one explicit request for tha
   await installBackend(page); await open(page);
   await page.evaluate(() => { (window as any).__pageCacheDelay = 800; (window as any).__pageDelay = 400; });
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
-  await panel(page).getByRole('button', { name: '다음 번역 페이지' }).click();
   await expect(panel(page)).toContainText('저장된 번역 확인 중');
   for (let n = 0; n < 2; n++) {
     await panel(page).getByRole('button', { name: '본문 번역 닫기' }).click();
     await page.getByRole('button', { name: '본문 번역', exact: true }).click();
   }
-  await expect(panel(page)).toContainText('한국어 번역 2-1'); expect(await calls(page)).toBe(2);
+  await expect(panel(page)).toContainText('한국어 번역 1-1'); expect(await calls(page)).toBe(1);
 });
 
-for (const rotation of [0, 90]) test(`original sentence hover highlights and reveals the translation without affecting selection (${rotation})`, async ({ page }) => {
+for (const rotation of [0, 90]) test(`original sentence hover highlights the translation without affecting selection (${rotation})`, async ({ page }) => {
   await installBackend(page, {delay:0,fail:false,rotation,userUnit:1}); await open(page);
   await page.getByRole('button', {name:'페이지 너비 맞춤'}).click(); await translate(page);
   const box = await wordBox(page, 'asymptotic');

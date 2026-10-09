@@ -270,25 +270,33 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .reader-layout > .reader { min-width: 0; }
 .body-translation-toggle, .translate-page-button { border: 1px solid #c9d4c5; border-radius: 5px; padding: 8px 11px; background: #fafbf7; font-size: 12px; white-space: nowrap; }
 .body-translation-toggle[aria-pressed="true"] { background: #e5ede0; color: #355647; }
-.translation-container, .translation-inactive { flex: 0 0 clamp(280px, 31vw, 440px); min-height: 0; }
+.translation-container, .translation-inactive { flex: 0 0 clamp(280px, 31vw, 440px); min-height: 0; min-width: 0; }
 .translation-inactive { visibility: hidden; pointer-events: none; }
 .page-translation-panel { height: 100%; display: flex; flex-direction: column; border-left: 1px solid #d8ded5; background: #fcfcfa; }
-.page-translation-panel > header { display: flex; align-items: center; justify-content: space-between; padding: 17px 20px 8px; font-size: 15px; }
-.page-translation-panel > header button, .translation-pagination button { border: 0; background: transparent; width: 30px; height: 30px; font-size: 21px; }
-.translation-pagination { display: flex; align-items: center; justify-content: space-between; padding: 2px 20px 12px; border-bottom: 1px solid #e3e6de; font-size: 12px; font-variant-numeric: tabular-nums; }
-.translation-content { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 30px; }
+.translation-pagination button { border: 0; background: transparent; width: 28px; height: 28px; padding: 0; font-size: 19px; }
+.translation-pagination { display: grid; grid-template-columns: 28px 1fr 28px 28px; align-items: center; gap: 4px; padding: 4px 10px; border-bottom: 1px solid #e3e6de; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
+.translation-close { margin-left: 3px; }
+.reader, .translation-content { overscroll-behavior: contain; }
+.translation-content { flex: 1; min-height: 0; overflow: auto; padding: 16px 12px 30px; background: #e9ebe6; }
 .translation-content > p { font-size: 12px; color: #737c70; line-height: 1.7; }
 .translation-content > [role="alert"] { color: #994e38; }
 .translation-content .translation-help { font-size: 11px; margin: 0 0 20px; }
 .translation-paragraph { font-size: 15px; line-height: 1.95; margin: 0 0 1em; text-align: justify; text-align-last: start; overflow-wrap: anywhere; word-break: normal; }
 .translation-heading { font-weight: 650; text-align: left; margin-top: 1.25em; line-height: 1.55; }
-.translation-equation { max-width: 100%; height: auto; vertical-align: middle; mix-blend-mode: multiply; }
+.translation-equation { max-width: 100%; }
 .translation-paragraph.translation-equation { text-align: center; text-align-last: center; margin: 1em 0; }
 .translation-paragraph.translation-equation .translated-sentence { display: inline-block; max-width: 100%; }
 .translated-sentence { display: inline; border: 0; border-radius: 2px; padding: 2px 0; background: transparent; cursor: pointer; user-select: text; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .translated-sentence[aria-pressed="true"] { background: #dedfdd; }
 .translated-sentence:focus-visible { outline: 1px solid #719180; }
-.translation-equation-fallback { font-family: serif; font-style: italic; overflow-wrap: anywhere; }
+.translation-paragraph .katex { font-size: 1.08em; text-align: initial; white-space: nowrap; }
+.translation-paragraph .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 2px; margin: .35em 0; }
+.translation-markdown-paragraph + .translation-markdown-paragraph { display: block; margin-top: .6em; }
+.translation-paragraph pre { white-space: pre-wrap; text-align: left; }
+.translation-caption { background: #f3f5f1; border-left: 3px solid #a8b6a1; padding: 12px 14px; text-align: left; margin-top: 1.5em; }
+.translation-footnote, .translation-header, .translation-footer { color: #677064; text-align: left; line-height: 1.65; }
+.translation-footnote, .translation-footer { border-top: 1px solid #e0e5dc; padding-top: 12px; margin-top: 1.5em; }
+.translation-region-label { display: block; font-size: 10px; letter-spacing: .02em; color: #727f6b; margin-bottom: 6px; user-select: none; }
 
 .translation-source-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: multiply; }
 .translation-source-mark { position: absolute; background: rgba(110, 110, 110, .26); }
@@ -302,10 +310,17 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 [data-resizing] > .page-translation-panel { user-select: none; pointer-events: none; }
 
 .translation-content { overflow-anchor: none; scroll-behavior: auto; padding-bottom: 20vh; }
-.translation-page { min-height: 70vh; padding-bottom: 40px; border-bottom: 1px solid #dfe4db; margin-bottom: 24px; }
-.translation-page > h3 { font-size: 11px; font-weight: 500; color: #7a8274; margin: 0 0 24px; }
-.translation-page > [role="status"], .translation-page > [role="alert"] { font-size: 12px; line-height: 1.7; }
-.translation-page > [role="alert"] { color: #994e38; }
+.translation-page { box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; width: 100%; min-height: 70vh; max-height: 100%; aspect-ratio: var(--page-aspect, .77); padding: 20px 20px 36px; border: 1px solid #dfe4db; margin-bottom: 24px; background: #fff; box-shadow: 0 2px 5px #26352212; }
+.translation-page-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; min-height: 26px; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid #eceee9; }
+.translation-page-header h3 { font-size: 11px; font-weight: 500; color: #7a8274; margin: 0; }
+.translation-page-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: stable; }
+.translation-page-content:focus-visible { outline: 1px solid #719180; outline-offset: -1px; }
+.retranslate-page-button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #d6ded0; background: #f8faf6; border-radius: 5px; padding: 4px 7px; font-size: 11px; color: #52654a; }
+.retranslate-page-button:disabled { opacity: .5; cursor: wait; }
+.translation-refresh { display: inline-block; font-size: 15px; line-height: 1; }
+.translation-refresh.spinning { animation: quota-refresh-turn 1s linear infinite; }
+.translation-page-content > [role="status"], .translation-page-content > [role="alert"] { font-size: 12px; line-height: 1.7; }
+.translation-page-content > [role="alert"] { color: #994e38; }
 .bubble-connector { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; color: #567762; z-index: -1; }
 .model-picker { display: grid; gap: 8px; }
 .model-picker label { display: grid; gap: 5px; font-size: 11px; color: #65735f; }

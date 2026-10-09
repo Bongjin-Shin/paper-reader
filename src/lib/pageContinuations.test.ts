@@ -5,7 +5,7 @@ vi.mock('./pageTranslation', () => ({ extractPageSentences: vi.fn() }));
 import { extractPageSentences } from './pageTranslation';
 import { continues, extractPageWithContinuations } from './pageContinuations';
 
-const sentence = (id: number, text: string, kind: 'paragraph' | 'heading' = 'paragraph'): SourceSentence => ({ id, text, rects: [[10, 10 + id * 20, 200, 20 + id * 20]], layout: { paragraph: id, kind, math: [] } });
+const sentence = (id: number, text: string, kind: NonNullable<SourceSentence['layout']>['kind'] = 'paragraph'): SourceSentence => ({ id, text, rects: [[10, 10 + id * 20, 200, 20 + id * 20]], layout: { paragraph: id, kind, math: [] } });
 it('completes both sides of a three-page sentence with identical text, local coordinates and shared multi-page highlights', async () => {
   const pages = [
     [sentence(0, 'Finished.'), sentence(1, 'The method considers')],
@@ -37,4 +37,24 @@ it('keeps equation source pages and canonical tokens when a sentence spans the b
   const pdf = { numPages: 2 } as PDFDocumentProxy;
   const a = await extractPageWithContinuations(pdf, 1), b = await extractPageWithContinuations(pdf, 2);
   expect(a[0].layout!.math).toEqual(b[0].layout!.math); expect(a[0].layout!.math.map(m => m.pageNumber)).toEqual([1, 2]);
+});
+
+it('skips captions, notes and publisher furniture when completing both sides of a page boundary', async () => {
+  const pages = [[sentence(0, 'Agents can hardly learn any useful'), sentence(1, 'Fig. 1. The scenario.', 'caption'),
+    sentence(2, 'Manuscript received in 2024.', 'footnote'), sentence(3, 'Copyright and licensed use.', 'footer')],
+    [sentence(0, 'Preprint accepted for publication.', 'header'), sentence(1, 'strategies from incomplete experiences.'), sentence(2, 'Next sentence.')]];
+  vi.mocked(extractPageSentences).mockImplementation(async (_, n) => pages[n - 1]);
+  const pdf = { numPages: 2 } as PDFDocumentProxy;
+  const first = await extractPageWithContinuations(pdf, 1), second = await extractPageWithContinuations(pdf, 2);
+  expect(first[0].text).toBe('Agents can hardly learn any useful strategies from incomplete experiences.');
+  expect(second[1].text).toBe(first[0].text);
+  expect(first[1]).toEqual(pages[0][1]); expect(second[0]).toEqual(pages[1][0]);
+});
+it('re-extracts local and adjacent geometry when explicitly translating again', async () => {
+  let changed = false;
+  vi.mocked(extractPageSentences).mockImplementation(async () => [sentence(0, changed ? 'Updated source.' : 'Old source.')]);
+  const pdf = { numPages: 1 } as PDFDocumentProxy;
+  expect((await extractPageWithContinuations(pdf, 1))[0].text).toBe('Old source.'); changed = true;
+  expect((await extractPageWithContinuations(pdf, 1))[0].text).toBe('Old source.');
+  expect((await extractPageWithContinuations(pdf, 1, true))[0].text).toBe('Updated source.');
 });

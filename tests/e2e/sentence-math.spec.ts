@@ -28,21 +28,24 @@ test('Korean sentences flow in justified paragraphs at narrow and wide panel wid
  await page.locator('[data-sentence-id="1"]').focus();await page.keyboard.press('Enter');await expect(page.locator('[data-sentence-id="1"]')).toHaveAttribute('aria-pressed','true');
 });
 
-for(const rotation of [0,90])test(`original formula images preserve scripts and fraction bars, survive resize/zoom/restart (${rotation})`,async({page})=>{
+for(const rotation of [0,90])test(`LaTeX formulas preserve scripts and fractions, survive resize/zoom/restart (${rotation})`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
  await installBackend(page,{delay:0,fail:false,rotation,userUnit:1},await makeSentenceMathPdf(rotation));await open(page);
  await page.getByRole('button',{name:'페이지 너비 맞춤'}).click();await page.getByRole('button',{name:'본문 번역',exact:true}).click();
- const images=page.locator('img.translation-equation');await expect(images).toHaveCount(2);
- await expect.poll(()=>images.evaluateAll(els=>els.every(img=>(img as HTMLImageElement).naturalWidth>0))).toBe(true);
+ const math=page.locator('.translated-sentences .katex');await expect(math).toHaveCount(2);
+ await expect(page.locator('.translated-sentences img')).toHaveCount(0);
+ await expect(page.locator('.translated-sentences .katex-error')).toHaveCount(0);
+ await expect(page.locator('.translated-sentences math mfrac')).toHaveCount(1);
+ await expect(page.locator('.translated-sentences math msup')).toHaveCount(1);
  expect(await page.locator('.translation-content').textContent()).not.toContain('[[PV_MATH_');
- const srcs=await images.evaluateAll(els=>els.map(el=>el.getAttribute('src')));
+ const markup=await math.evaluateAll(els=>els.map(el=>el.innerHTML));
  const equation=page.locator('.translation-paragraph.translation-equation');await expect(equation).toHaveCount(1);
  await equation.locator('.translated-sentence').hover();await expect(page.locator('.translation-source-mark')).toHaveCount(1);
  const sourceBox=(await page.locator('.translation-source-mark').boundingBox())!;await page.mouse.move(sourceBox.x+sourceBox.width/2,sourceBox.y+sourceBox.height/2);await expect(equation.locator('.translated-sentence')).toHaveAttribute('aria-pressed','true');
  await page.getByRole('button',{name:'확대',exact:true}).click();await page.getByRole('separator',{name:'번역창 너비 조절'}).focus();await page.keyboard.press('ArrowLeft');
- expect(await images.evaluateAll(els=>els.map(el=>el.getAttribute('src')))).toEqual(srcs);
+ expect(await math.evaluateAll(els=>els.map(el=>el.innerHTML))).toEqual(markup);
  await page.screenshot({path:`.tools/sentence-math-verification/formulas-${rotation}.png`});
- await page.reload();await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();await expect(images).toHaveCount(2);await expect.poll(()=>images.evaluateAll(els=>els.every(img=>(img as HTMLImageElement).naturalWidth>0))).toBe(true);
+ await page.reload();await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();await expect(math).toHaveCount(2);await expect(page.locator('.translated-sentences math mfrac')).toHaveCount(1);
  expect(await page.evaluate(()=>(window as any).__pageApiCalls??0)).toBe(0);expect(errors).toEqual([]);
 });
 
