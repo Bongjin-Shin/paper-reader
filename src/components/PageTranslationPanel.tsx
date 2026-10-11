@@ -24,7 +24,7 @@ function TranslationPage({ number, t, pdf }: { number: number; t: Translation; p
     return () => { live = false; };
   }, [number, pdf]);
   return <section ref={ref} className="translation-page" data-page-number={number} aria-label={`${number}페이지 번역`}>
-    <div className="translation-page-header"><h3>{number} 페이지</h3>
+    <div className="translation-page-header"><h3>{number}/{pdf.numPages} 페이지</h3>
       {entry?.data && <button className="retranslate-page-button" disabled={!!entry.phase}
         aria-label={`${number}페이지 재번역`} title="저장된 번역 대신 이 페이지를 새로 번역합니다."
         onClick={() => void t.load(number, true, true)}>

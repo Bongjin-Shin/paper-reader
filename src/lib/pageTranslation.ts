@@ -3,6 +3,7 @@ import type { SourceSentence, EquationSource } from '../types';
 import { mathFont, mathGroups, textBlocks, clipInlineEquation, lineNumberRuns } from './translationLayout';
 import { readingRegions } from './translationRegions';
 import { rectToPdf } from './selection';
+import { extractTables, tableRules } from './translationTables';
 
 export interface TextRun { text: string; left: number; top: number; right: number; bottom: number; baseline?: number; fontSize?: number; inkTop?: number; inkBottom?: number; math?: boolean; bold?: boolean; italic?: boolean }
 export interface Line { runs: number[]; left: number; top: number; right: number; bottom: number; column: number; kind?: NonNullable<SourceSentence['layout']>['kind']; region?: number }
@@ -129,7 +130,7 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
   const task = new TextLayer({ textContentSource: content, container: layer, viewport });
   try {
     await task.render();
-    await page.getOperatorList(); // Loads font names; reuse PDF.js' existing operator cache.
+    const rules = await tableRules(page, viewport); // Also loads font names through PDF.js' operator cache.
     const nodes: Text[] = [], runs: TextRun[] = [];
     const items = content.items.filter(item => 'str' in item);
     for (const [index, element] of task.textDivs.entries()) {
@@ -151,10 +152,17 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
     const numbers = lineNumberRuns(runs);
     for (const index of [...numbers].sort((a, b) => b - a)) { runs.splice(index, 1); nodes.splice(index, 1); }
     const bodySize = median(runs.filter(r => !r.math && /[A-Za-z]{3}/.test(r.text)).map(r => r.fontSize ?? 10)) || 10;
-    const lines = readingRegions(orderedLines(runs), runs, viewport.height);
-    const blocks = textBlocks(lines, runs);
-    const sentences: SourceSentence[] = [];
     const origin = host.getBoundingClientRect();
+    const { used, tables } = extractTables(runs, rules.map(r=>({left:r.left+origin.left,right:r.right+origin.left,top:r.top+origin.top})));
+    const bodyIds = runs.map((_,i)=>i).filter(i=>!used.has(i));
+    const bodyLines = orderedLines(bodyIds.map(i=>runs[i])).map(line=>({...line,runs:line.runs.map(i=>bodyIds[i])}));
+    const lines = readingRegions(bodyLines, runs, viewport.height);
+    const blocks = textBlocks(lines, runs);
+    for (const table of tables) {
+      const after = blocks.findIndex(block => block.kind === 'caption' && block.lines.some(line=>Math.abs(line.top-table.captionTop)<bodySize));
+      blocks.splice(after < 0 ? blocks.length : after+1, 0, ...table.cells);
+    }
+    const sentences: SourceSentence[] = [];
     let mathId = pageNumber * 1000;
     const equation = (ids: number[], punctuation = '', line?: Line): EquationSource => {
       const boxes = ids.map(i => {
@@ -177,9 +185,12 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
       const total = weight(() => true) || 1;
       const typography = { fontScale: Math.max(.65, Math.min(2.5, (median(prose.map(r => r.fontSize ?? bodySize)) || bodySize) / bodySize)),
         bold: weight(r => !!r.bold) / total > .55, italic: weight(r => !!r.italic) / total > .55 };
-      if (block.kind === 'equation') {
+      const cellRuns = block.lines.flatMap(l=>l.runs.map(i=>runs[i]));
+      const mathCell = block.table && !block.table.header && cellRuns.some(r=>r.math)
+        && !cellRuns.some(r=>!r.math && (r.fontSize ?? bodySize)>=bodySize*.85 && /[A-Za-z]{4,}\s+[A-Za-z]{4,}/.test(r.text));
+      if (block.kind === 'equation' || mathCell) {
         const math = equation(block.lines.flatMap(line=>line.runs));
-        sentences.push({id:sentences.length,text:math.token,rects:[math.rect],layout:{paragraph,kind:block.kind,math:[math],typography,sources:[{pageNumber,rects:[math.rect]}]}});
+        sentences.push({id:sentences.length,text:math.token,rects:[math.rect],layout:{paragraph,kind:block.kind,table:block.table,math:[math],typography,sources:[{pageNumber,rects:[math.rect]}]}});
         continue;
       }
       let text = '';
@@ -200,7 +211,7 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
           else { text += item.text; spans.push({run,start,end:text.length}); previous = item; }
         }
       }
-      const ranges = block.kind === 'heading' ? [{start:0,end:text.length,text:text.replace(/\s+/g,' ').trim()}] : sentenceRanges(text);
+      const ranges = block.kind === 'heading' || block.kind === 'table' ? [{start:0,end:text.length,text:text.replace(/\s+/g,' ').trim()}] : sentenceRanges(text);
       for (const sentence of ranges) {
         const rects: SourceSentence['rects'] = [], math: EquationSource[] = [];
         for (const span of spans) {
@@ -210,7 +221,7 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
           const range = document.createRange(); range.setStart(nodes[span.run!], start-span.start); range.setEnd(nodes[span.run!], end-span.start);
           for (const box of range.getClientRects()) { if (box.width>.1 && box.height>.1) rects.push(rectToPdf(box,origin,viewport)); }
         }
-        if (rects.length) sentences.push({id:sentences.length,text:sentence.text,rects,layout:{paragraph,kind:block.kind,math,typography,sources:[{pageNumber,rects}]}});
+        if (rects.length) sentences.push({id:sentences.length,text:sentence.text,rects,layout:{paragraph,kind:block.kind,table:block.table,math,typography,sources:[{pageNumber,rects}]}});
       }
     }
     if (!sentences.length) throw new Error('선택 가능한 텍스트가 없는 페이지입니다. 이미지로 된 페이지는 본문 번역을 지원하지 않습니다.');

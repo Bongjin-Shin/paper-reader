@@ -1,4 +1,5 @@
 import type { EquationGlyph } from '../types';
+import { normalizeLatex } from './latex';
 
 export type CopyGlyph = EquationGlyph & { width?: number };
 const symbols: Record<string, string> = {
@@ -88,6 +89,6 @@ export function glyphsToLatex(input: CopyGlyph[], depth = 0): string {
   return text.length > 1 ? `\\begin{gathered} ${text.join(' \\\\ ')} \\end{gathered}` : text[0] ?? '';
 }
 export const mathMarkdown = (latex: string, display = false) => {
-  const text = latex.trim().replace(/^\$\$?\s*|\s*\$\$?$/g,'');
+  const text = normalizeLatex(latex);
   return display ? `\n\n$$\n${text}\n$$\n\n` : `$${text}$`;
 };

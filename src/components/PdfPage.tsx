@@ -6,6 +6,8 @@ import { highlightCss } from '../lib/highlights';
 import type { Highlight, WordSelection, PdfRect } from '../types';
 import { canvasSize, type PageRenderCache } from '../lib/pageRendering';
 import { registerPdfCopyLayer } from '../lib/pdfClipboard';
+import { registerSearchTextLayer, type PdfSearchMatch } from '../lib/pdfSearch';
+import { PdfSearchLayer } from './PdfSearchLayer';
 
 interface Props {
   pdf: PDFDocumentProxy;
@@ -15,13 +17,15 @@ interface Props {
   displayScale: RefObject<number>;
   highlights: Highlight[];
   translationRects?: PdfRect[];
+  searchMatches?: PdfSearchMatch[];
+  selectedSearchId?: number;
   onSelect: (selection: WordSelection | null, extending?: boolean) => void;
   onRendered?: (pageNumber: number) => void;
   cache: PageRenderCache;
   onHighlight: (highlight: Highlight, selection: WordSelection) => void;
 }
 
-export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, renderRevision, displayScale, highlights, translationRects, onSelect, onRendered, cache, onHighlight }: Props) {
+export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, renderRevision, displayScale, highlights, translationRects, searchMatches, selectedSearchId, onSelect, onRendered, cache, onHighlight }: Props) {
   const renderScale = scale;
   const hostRef = useRef<HTMLElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
@@ -147,7 +151,7 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
         // own rotation transform or remeasuring every glyph at each zoom stop.
         text.style.transform = `scale(${renderScale / textScale})`;
         registerTextLayer(layer, viewport);
-        if (textLayer) registerPdfCopyLayer(layer, page, content, textLayer.textDivs);
+        if (textLayer) { registerPdfCopyLayer(layer, page, content, textLayer.textDivs); registerSearchTextLayer(layer, textLayer.textDivs); }
         if (!existing) textHostRef.current!.replaceChildren(text);
         if (old) { old.canvas.width = old.canvas.height = 0; }
         committed = true;
@@ -194,6 +198,8 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
       '--total-scale-factor': 'calc(var(--scale-factor) * var(--user-unit))' } as React.CSSProperties}>
     <div ref={canvasHostRef} className="canvas-layer" />
     {resident && paintedViewport && <HighlightLayer viewport={paintedViewport} highlights={highlights} />}
+    {ready && paintedViewport && surface.current && searchMatches && <PdfSearchLayer layer={surface.current.layer}
+      matches={searchMatches} selected={selectedSearchId ?? -1} viewport={paintedViewport} />}
     {resident && paintedViewport && translationRects && <div className="translation-source-layer" aria-hidden="true">
       {translationRects.map((rect, index) => <span key={index} className="translation-source-mark" style={pdfToStyle(rect, paintedViewport)} />)}
     </div>}

@@ -35,6 +35,15 @@ button:focus-visible { outline: 2px solid #37796c; outline-offset: 3px; }
 .drop-overlay { position: absolute; inset: 75px 18px 42px; z-index: 25; border: 2px dashed #7a9770; border-radius: 12px; background: #f2f7eefa; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; pointer-events: none; color: #365d4f; }
 .drop-overlay.invalid { background: #fcf0ebf5; border-color: #b58d78; color: #944f35; }
 .reader { flex: 1; overflow: auto; position: relative; }
+.find-toggle { border: 1px solid #d8ded5; border-radius: 5px; background: transparent; width: 30px; height: 30px; padding: 0; font-size: 24px; }
+.pdf-find-bar { display: flex; align-items: center; gap: 6px; padding: 6px 16px; flex-shrink: 0; background: #fcfcfa; border-bottom: 1px solid #dfe2db; }
+.pdf-find-bar input { width: min(300px, 45vw); padding: 6px 10px; border: 1px solid #b9c8b4; border-radius: 5px; font: inherit; font-size: 13px; }
+.pdf-find-bar [role="status"] { min-width: 90px; font-size: 12px; color: #63765b; }
+.pdf-find-bar button { width: 28px; height: 28px; border: 0; border-radius: 4px; background: transparent; font-size: 19px; }
+.pdf-find-bar small { font-size: 11px; color: #994e38; }
+.pdf-search-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.pdf-search-mark { position: absolute; background: #f8da4270; }
+.pdf-search-mark.current { background: #f2a34095; outline: 1px solid #b87518; }
 .workspace { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
 /* Keep the reader's geometry, scroll position and bounded page cache while away. */
 .reader-inactive { visibility: hidden; pointer-events: none; }
@@ -277,7 +286,7 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .translation-pagination { display: grid; grid-template-columns: 28px 1fr 28px 28px; align-items: center; gap: 4px; padding: 4px 10px; border-bottom: 1px solid #e3e6de; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
 .translation-close { margin-left: 3px; }
 .reader, .translation-content { overscroll-behavior: contain; }
-.translation-content { flex: 1; min-height: 0; overflow: auto; padding: 16px 12px 30px; background: #e9ebe6; }
+.translation-content { flex: 1; min-height: 0; overflow: auto; padding: 16px 24px 30px; background: #e9ebe6; }
 .translation-content > p { font-size: 12px; color: #737c70; line-height: 1.7; }
 .translation-content > [role="alert"] { color: #994e38; }
 .translation-content .translation-help { font-size: 11px; margin: 0 0 20px; }
@@ -290,6 +299,15 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .translated-sentence[aria-pressed="true"] { background: #dedfdd; }
 .translated-sentence:focus-visible { outline: 1px solid #719180; }
 .translation-paragraph .katex { font-size: 1.08em; text-align: initial; white-space: nowrap; }
+.translation-math { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; padding: 2px 1px; }
+.translation-math.display { display: block; }
+.translation-math-fallback { font-family: serif; overflow-wrap: anywhere; }
+.translation-table-scroll { max-width: 100%; overflow-x: auto; margin: 16px 0; padding-bottom: 12px; }
+.translation-table { border-collapse: collapse; width: 100%; min-width: 360px; font-size: 13px; line-height: 1.6; text-align: left; }
+.translation-table th, .translation-table td { border: 1px solid #dce2d8; padding: 10px 12px; vertical-align: top; min-width: 85px; }
+.translation-table th { background: #edf1e9; font-weight: 600; }
+.translation-table .translation-math { max-width: none; overflow: visible; }
+.translation-table .katex { font-size: 1.05em; white-space: nowrap; }
 .translation-paragraph .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 2px; margin: .35em 0; }
 .translation-markdown-paragraph + .translation-markdown-paragraph { display: block; margin-top: .6em; }
 .translation-paragraph pre { white-space: pre-wrap; text-align: left; }
@@ -313,7 +331,7 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .translation-page { box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; width: 100%; min-height: 70vh; max-height: 100%; aspect-ratio: var(--page-aspect, .77); padding: 20px 20px 36px; border: 1px solid #dfe4db; margin-bottom: 24px; background: #fff; box-shadow: 0 2px 5px #26352212; }
 .translation-page-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; min-height: 26px; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid #eceee9; }
 .translation-page-header h3 { font-size: 11px; font-weight: 500; color: #7a8274; margin: 0; }
-.translation-page-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: stable; }
+.translation-page-content { flex: 1; min-height: 0; min-width: 0; padding-right: 20px; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: stable; }
 .translation-page-content:focus-visible { outline: 1px solid #719180; outline-offset: -1px; }
 .retranslate-page-button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #d6ded0; background: #f8faf6; border-radius: 5px; padding: 4px 7px; font-size: 11px; color: #52654a; }
 .retranslate-page-button:disabled { opacity: .5; cursor: wait; }

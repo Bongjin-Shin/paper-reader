@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-import {installBackend,open} from './helpers';
+import {installBackend,open, startPageTranslation } from './helpers';
 import {makeSentenceMathPdf} from '../sentenceMathFixture';
 
 async function captureCopy(page: Page) {
@@ -40,7 +40,7 @@ for(const rotation of [0,90])test(`original PDF copies scripts and fractions bef
 test('rendered math copies one original TeX expression even for a partial visual selection',async({page,context})=>{
  await context.grantPermissions(['clipboard-read','clipboard-write']);
  await installBackend(page,undefined,await makeSentenceMathPdf());await open(page);
- await page.getByRole('button',{name:'본문 번역',exact:true}).click();
+ await page.getByRole('button',{name:'본문 번역',exact:true}).click(); await startPageTranslation(page);
  const formula=page.locator('.translation-equation .katex');await expect(formula).toHaveCount(1);
  await selectElement(page,'.translation-equation .katex-html');
  const result=await captureCopy(page);
@@ -59,7 +59,7 @@ test('rendered math copies one original TeX expression even for a partial visual
 test('mixed translated prose, Markdown and inline math copy without visual duplicates',async({page})=>{
  await installBackend(page);await open(page);
  await page.evaluate(()=>{(window as any).__longPageTranslation='**굵은 글씨**와 *기울임*, $S=\\{s_1,s_{k_s}\\}$를 사용합니다.';});
- await page.getByRole('button',{name:'본문 번역',exact:true}).click();
+ await page.getByRole('button',{name:'본문 번역',exact:true}).click(); await startPageTranslation(page);
  await expect(page.locator('.translated-sentence .katex')).toHaveCount(4);
  await selectElement(page,'.translated-sentence');
  const copied=await captureCopy(page);
@@ -67,7 +67,7 @@ test('mixed translated prose, Markdown and inline math copy without visual dupli
  expect(copied.text.match(/S=/g)).toHaveLength(1);expect(copied.text).not.toContain('​');
 });
 test('wheel scrolling, page controls, and zoom leave the other pane in place; toolbar stays compact',async({page})=>{
- await installBackend(page);await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();
+ await installBackend(page);await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click(); await startPageTranslation(page);
  await expect(page.locator('.translated-sentence')).toHaveCount(4);
  const reader=page.locator('.reader'),pane=page.locator('.translation-content'),bar=page.locator('.translation-pagination');
  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(40);

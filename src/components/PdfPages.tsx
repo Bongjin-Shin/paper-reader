@@ -3,6 +3,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Highlight, WordSelection, TranslationMark } from '../types';
 import { PageRenderCache } from '../lib/pageRendering';
 import { PdfPage } from './PdfPage';
+import type { PdfSearchMatch } from '../lib/pdfSearch';
 
 const empty: Highlight[] = [];
 interface Props {
@@ -12,12 +13,14 @@ interface Props {
   displayScale: RefObject<number>;
   highlights: Highlight[];
   translationMark: TranslationMark[] | null;
+  searchMatches: Map<number, PdfSearchMatch[]>;
+  selectedSearchId: number;
   onSelect: (selection: WordSelection | null, extending?: boolean) => void;
   onRendered: (pageNumber: number) => void;
   onHighlight: (highlight: Highlight, selection: WordSelection) => void;
 }
 
-export const PdfPages = memo(function PdfPages({ pdf, scale, renderRevision, displayScale, highlights, translationMark, onSelect, onRendered, onHighlight }: Props) {
+export const PdfPages = memo(function PdfPages({ pdf, scale, renderRevision, displayScale, highlights, translationMark, searchMatches, selectedSearchId, onSelect, onRendered, onHighlight }: Props) {
   const cache = useMemo(() => new PageRenderCache(), [pdf]);
   useLayoutEffect(() => cache.prepareZoom(), [cache, scale]);
   const previous = useRef(new Map<number, Highlight[]>());
@@ -43,6 +46,7 @@ export const PdfPages = memo(function PdfPages({ pdf, scale, renderRevision, dis
     {Array.from({ length: pdf.numPages }, (_, index) => <PdfPage key={index}
       pdf={pdf} pageNumber={index + 1} scale={scale} renderRevision={renderRevision} displayScale={displayScale} cache={cache}
       translationRects={translationByPage.get(index + 1)}
+      searchMatches={searchMatches.get(index + 1)} selectedSearchId={selectedSearchId}
       highlights={byPage.get(index + 1) ?? empty} onSelect={onSelect} onRendered={onRendered} onHighlight={onHighlight} />)}
   </div>;
 });

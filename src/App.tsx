@@ -8,6 +8,8 @@ import { PaperChat } from './components/PaperChat';
 import { PageTranslationPanel } from './components/PageTranslationPanel';
 import { usePageTranslation } from './lib/usePageTranslation';
 import { usePaperClipboard } from './lib/usePaperClipboard';
+import { usePdfSearch } from './lib/usePdfSearch';
+import { PdfFindBar } from './components/PdfFindBar';
 import { PdfPages } from './components/PdfPages';
 import { WordBubble, type BubbleState } from './components/WordBubble';
 import { AiConnection } from './components/AiConnection';
@@ -105,6 +107,7 @@ export default function App() {
   }, [syncSelection]);
   const zoom = useReaderZoom(scrollRef, pdf, onZoomSettled);
   const translation = usePageTranslation(pdf, paper?.id, scrollRef, view === 'reader', () => setUsageRevision(n => n + 1));
+  const search = usePdfSearch(pdf, scrollRef, view === 'reader');
   usePaperClipboard(scrollRef, translation, view === 'reader');
   const { scale } = zoom;
   scaleRef.current = scale;
@@ -444,6 +447,7 @@ export default function App() {
           <button aria-label="확대" disabled={scale >= 4} onClick={() => zoom.step(1)}>+</button>
           <button className="fit-width" aria-label="페이지 너비 맞춤" aria-pressed={zoom.fitting} onClick={zoom.fitWidth}>너비 맞춤</button>
         </div>}
+        {pdf && view === 'reader' && <button className="find-toggle" aria-label="본문 내 찾기" title="본문 내 찾기 (Ctrl+F)" onClick={search.reveal}>⌕</button>}
         {pdf && view === 'reader' && <button className="body-translation-toggle" aria-pressed={translation.open}
           onClick={translation.toggle}>본문 번역</button>}
         {pdf && view === 'reader' && <button aria-pressed={chatOpen} onClick={() => { setChatMountedFor(paper?.id); setChatOpen(v => !v); }}>논문 채팅</button>}
@@ -454,11 +458,13 @@ export default function App() {
     </header>
     {error && <div className="error-banner" role="alert"><span>{error}</span><button aria-label="오류 메시지 닫기" onClick={() => setError('')}>×</button></div>}
     <div className="workspace" inert={historyBusy}>
+    {pdf && view === 'reader' && search.open && <PdfFindBar search={search} />}
     <div className="reader-layout">
     <main ref={scrollRef} className={`reader ${pdf ? 'has-pdf' : ''} ${view !== 'reader' ? 'reader-inactive' : ''}`}
-      inert={view !== 'reader'} aria-hidden={view !== 'reader'}>
+      tabIndex={-1} inert={view !== 'reader'} aria-hidden={view !== 'reader'}>
       {pdf ? <PdfPages key={pdf.loadingTask.docId} pdf={pdf} scale={zoom.renderScale} renderRevision={zoom.renderRevision} displayScale={zoom.scaleRef} highlights={highlights}
-        translationMark={translation.mark} onSelect={handleSelect} onRendered={onPageRendered} onHighlight={handleHighlight} /> : <div className="empty-state">
+        translationMark={translation.mark} searchMatches={search.byPage} selectedSearchId={search.selected}
+        onSelect={handleSelect} onRendered={onPageRendered} onHighlight={handleHighlight} /> : <div className="empty-state">
         <div className="empty-icon"><PaperIcon large /></div>
         <p className="eyebrow">읽기의 흐름을 이어가세요</p>
         <h1>논문 속 낯선 단어를,<br />이해로 바꾸는 순간.</h1>

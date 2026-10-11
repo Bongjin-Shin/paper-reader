@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { installBackend, open, wordBox } from './helpers';
+import { installBackend, open, wordBox, startPageTranslation } from './helpers';
 import { makeTranslationRegionsPdf } from '../translationRegionsFixture';
 import type { PageTranslationRequest } from '../../src/types';
 
@@ -8,7 +8,7 @@ const requests = (page: import('@playwright/test').Page) => page.evaluate(() =>
 
 test('page cards keep captions and notes separate and complete body sentences across columns and pages', async ({ page }) => {
   await installBackend(page, undefined, await makeTranslationRegionsPdf()); await open(page);
-  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   const first = page.locator('.translation-page').nth(0), second = page.locator('.translation-page').nth(1);
   await expect(first.locator('.translation-caption')).toHaveCount(1);
   const rows = (await requests(page))[0].sentences;
@@ -44,7 +44,7 @@ test('page cards keep captions and notes separate and complete body sentences ac
 test('hover only highlights even when the matching translated sentence is offscreen', async ({ page }) => {
   await installBackend(page); await open(page);
   await page.evaluate(() => { (window as any).__longPageTranslation = '긴 번역 문장입니다. '.repeat(150); });
-  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   await expect(page.locator('.translated-sentence')).toHaveCount(4);
   const target = page.locator('[data-sentence-id="1"]');
   const pane = (await page.locator('.translation-content').boundingBox())!;
@@ -71,7 +71,7 @@ test('hover only highlights even when the matching translated sentence is offscr
 
 test('retranslation bypasses a saved page, preserves it on failure, and saves Markdown replacements', async ({ page }) => {
   await installBackend(page); await open(page);
-  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   const button = page.getByRole('button', { name: '1페이지 재번역' });
   await expect(button).toBeEnabled();
   const original = await page.locator('.translated-sentences').textContent();

@@ -1,16 +1,27 @@
 import { expect, test, type Page } from '@playwright/test';
-import { installBackend, open, select, wordBox } from './helpers';
+import { installBackend, open, select, wordBox, startPageTranslation } from './helpers';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 
 const panel = (page: Page) => page.getByRole('complementary', { name: '본문 번역' });
-async function translate(page: Page) {
+async function translate(page: Page, start = true) {
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  if (start) await startPageTranslation(page);
   await expect(panel(page).locator('.translated-sentence').first()).toBeVisible();
 }
 async function calls(page: Page) { return page.evaluate(() => (window as any).__pageApiCalls ?? 0); }
 
 test('translates only the current page, caches it across restart and never adds vocabulary', async ({ page }) => {
-  await installBackend(page); await open(page); await translate(page);
+  await installBackend(page); await open(page);
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await expect(panel(page).locator('.translation-page').first().getByRole('button', { name: '이 페이지 번역' })).toBeVisible();
+  expect(await calls(page)).toBe(0);
+  await panel(page).getByRole('button', { name: '다음 번역 페이지' }).click();
+  await expect(panel(page).locator('.translation-page').nth(1).getByRole('button', { name: '이 페이지 번역' })).toBeInViewport();
+  expect(await calls(page)).toBe(0);
+  await panel(page).getByRole('button', { name: '본문 번역 닫기' }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  expect(await calls(page)).toBe(0);
+  await startPageTranslation(page);
   await expect(panel(page).locator('.translated-sentence')).toHaveCount(4);
   expect(await calls(page)).toBe(1);
   const sources = await page.evaluate(() => (window as any).__calls.find((c: any) => c.command === 'translate_page').args.request.sentences);
@@ -26,7 +37,7 @@ test('translates only the current page, caches it across restart and never adds 
   await panel(page).getByRole('button', { name: '이전 번역 페이지' }).click();
   await expect(panel(page)).toContainText('1 / 2 페이지');
   await expect(panel(page)).toContainText('한국어 번역 1-1'); expect(await calls(page)).toBe(2);
-  await page.reload(); await open(page); await translate(page); expect(await calls(page)).toBe(0);
+  await page.reload(); await open(page); await translate(page, false); expect(await calls(page)).toBe(0);
 });
 
 for (const rotation of [0, 90, 180, 270]) test(`source gray rectangles follow PDF coordinates after zoom/scroll (rotation ${rotation})`, async ({ page }) => {
@@ -68,17 +79,19 @@ test('failed request can retry, repeated open does not duplicate an in-flight tr
   await installBackend(page); await open(page);
   await page.evaluate(() => { (window as any).__pageFail = true; });
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await startPageTranslation(page);
   await expect(panel(page).getByRole('alert')).toContainText('실패');
   expect(await page.evaluate(() => localStorage.getItem('test-cost'))).toBeNull();
   await page.evaluate(() => { (window as any).__pageFail = false; (window as any).__pageDelay = 400; });
   await panel(page).getByRole('button', { name: '다시 시도' }).click();
   await panel(page).getByRole('button', { name: '본문 번역 닫기' }).click();
-  await translate(page); expect(await calls(page)).toBe(2);
+  await translate(page, false); expect(await calls(page)).toBe(2);
 });
 
 test('scroll changes the translation page without spending API and late result cannot replace another PDF', async ({ page }) => {
   await installBackend(page); await open(page); await page.evaluate(() => { (window as any).__pageDelay = 700; });
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await startPageTranslation(page);
   await expect.poll(() => calls(page)).toBe(1);
   await panel(page).getByRole('button', { name: '다음 번역 페이지' }).click();
   await expect(panel(page).getByRole('button', { name: '이 페이지 번역' })).toBeVisible();
@@ -114,10 +127,11 @@ test('image-only page gives a clear message without a model request', async ({ p
   await page.getByRole('button', { name: 'PDF 파일 열기' }).click();
   await expect(page.locator('.no-text-note')).toBeVisible();
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await startPageTranslation(page);
   await expect(panel(page).getByRole('alert')).toContainText('텍스트가 없는 페이지'); expect(await calls(page)).toBe(0);
 });
 
-test('reopening during a slow cache read serializes one explicit request for that page', async ({ page }) => {
+test('reopening during a slow cache read never starts translation before the page button', async ({ page }) => {
   await installBackend(page); await open(page);
   await page.evaluate(() => { (window as any).__pageCacheDelay = 800; (window as any).__pageDelay = 400; });
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
@@ -126,6 +140,9 @@ test('reopening during a slow cache read serializes one explicit request for tha
     await panel(page).getByRole('button', { name: '본문 번역 닫기' }).click();
     await page.getByRole('button', { name: '본문 번역', exact: true }).click();
   }
+  await expect(panel(page).locator('.translation-page').first().getByRole('button', { name: '이 페이지 번역' })).toBeVisible();
+  expect(await calls(page)).toBe(0);
+  await startPageTranslation(page);
   await expect(panel(page)).toContainText('한국어 번역 1-1'); expect(await calls(page)).toBe(1);
 });
 
@@ -151,9 +168,9 @@ test('panel resizes by dragging or keyboard, keeps PDF fit and matching, and rem
   const resized = (await panel(page).boundingBox())!.width;
   const box = await wordBox(page,'asymptotic'); await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
   await expect(panel(page).locator('.translated-sentence').first()).toHaveAttribute('aria-pressed','true');
-  await panel(page).getByRole('button',{name:'본문 번역 닫기'}).click(); await translate(page);
+  await panel(page).getByRole('button',{name:'본문 번역 닫기'}).click(); await translate(page, false);
   expect((await panel(page).boundingBox())!.width).toBeCloseTo(resized,0);
-  await page.reload(); await open(page); await translate(page);
+  await page.reload(); await open(page); await translate(page, false);
   expect((await panel(page).boundingBox())!.width).toBeCloseTo(resized,0); expect(await calls(page)).toBe(0);
 });
 
@@ -161,6 +178,7 @@ test('a complete streamed sentence is readable before page completion; failure d
   await installBackend(page); await open(page);
   await page.evaluate(()=>{ (window as any).__pageStreaming=true; (window as any).__pageDelay=1700; (window as any).__pageFail=true; });
   await page.getByRole('button',{name:'본문 번역',exact:true}).click();
+  await startPageTranslation(page);
   await expect(panel(page)).toContainText('먼저 도착한 번역 문장입니다.');
   await expect(panel(page).getByRole('status')).toContainText('1/4 문장');
   expect(await page.evaluate(()=>localStorage.getItem('test-page-translations'))).toBeNull();

@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { installBackend, open } from './helpers';
+import { installBackend, open, startPageTranslation } from './helpers';
 
 test('long translations scroll within pages, then hand off at both boundaries without moving the PDF', async ({ page }) => {
   await installBackend(page); await open(page);
   await page.evaluate(() => { (window as any).__longPageTranslation = '페이지 안에서 긴 번역을 끝까지 읽습니다. '.repeat(80) + '**마지막 문장**'; });
-  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   const cards = page.locator('.translation-page'), pane = page.locator('.translation-content'), reader = page.locator('.reader');
   const first = page.getByRole('region', { name: '1페이지 번역 내용', exact: true });
   const second = page.getByRole('region', { name: '2페이지 번역 내용', exact: true });

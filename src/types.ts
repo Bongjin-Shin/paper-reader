@@ -112,8 +112,9 @@ export interface EquationGlyph { text: string; x: number; y: number; size: numbe
 export interface EquationSource { token: string; text: string; rect: PdfRect; fontSize: number; pageNumber?: number; glyphs?: EquationGlyph[] }
 export interface RenderedEquation { token: string; latex: string }
 export interface SentenceTypography { fontScale: number; bold: boolean; italic: boolean }
-export interface SentenceLayout { paragraph: number; kind: 'paragraph' | 'heading' | 'equation' | 'caption' | 'footnote' | 'header' | 'footer'; math: EquationSource[];
-  sources?: TranslationMark[]; typography?: SentenceTypography }
+export interface TableCellLayout { id: number; row: number; column: number; columns: number; header: boolean }
+export interface SentenceLayout { paragraph: number; kind: 'paragraph' | 'heading' | 'equation' | 'caption' | 'footnote' | 'header' | 'footer' | 'table'; math: EquationSource[];
+  sources?: TranslationMark[]; typography?: SentenceTypography; table?: TableCellLayout }
 export interface SourceSentence { id: number; text: string; rects: PdfRect[]; layout?: SentenceLayout }
 export interface TranslatedSentence extends SourceSentence { translation: string; equations?: RenderedEquation[] }
 export interface PageTranslation { pageNumber: number; sentences: TranslatedSentence[] }

@@ -82,6 +82,7 @@ test('new selections replace temporary menus and outside clicks dismiss them; hy
 });
 
 test('empty screen stays minimal', async ({ page }) => {
+  await installBackend(page);
   await page.goto('/');
   await expect(page.getByRole('heading')).toContainText('논문 속 낯선 단어를');
   await expect(page.getByRole('button')).toHaveCount(14); // Existing controls plus the requested translation connection setting

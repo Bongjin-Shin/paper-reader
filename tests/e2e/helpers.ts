@@ -390,6 +390,12 @@ export async function open(page: Page) {
   await expect(page.locator('.page-message')).toHaveCount(0);
 }
 
+/** Opening the pane is read-only; request a new translation from its page button. */
+export async function startPageTranslation(page: Page, pageNumber = 1) {
+  await page.getByRole('region', { name: `${pageNumber}페이지 번역 내용`, exact: true })
+    .getByRole('button', { name: '이 페이지 번역', exact: true }).click();
+}
+
 export async function wordBox(page: Page, word = 'asymptotic', occurrence = 0, pageNumber = 1) {
   // Highlight rectangles and text nodes can attach before the page's render promise settles.
   // Measure only after the Reader enables selection/hit testing at the requested scale.

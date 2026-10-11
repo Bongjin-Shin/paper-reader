@@ -126,7 +126,7 @@ export function usePageTranslation(pdf: PDFDocumentProxy | null, paperId: string
   const toggle = () => {
     if (open) { setOpen(false); return; }
     const number = reader.current ? visiblePage(reader.current) : 1;
-    setPageNumber(number); setOpen(true); void load(number, true);
+    setPageNumber(number); setOpen(true);
   };
   const goTo = (number: number) => {
     const root = reader.current, page = root?.querySelector<HTMLElement>(`.pdf-page[data-page-number="${number}"]`);

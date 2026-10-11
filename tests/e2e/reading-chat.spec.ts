@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { installBackend, open, select } from './helpers';
+import { installBackend, open, select, startPageTranslation } from './helpers';
 
 test('subscription translation and chat models are independent, effort follows the model, and chat persists', async ({ page }) => {
   await installBackend(page); await open(page);
@@ -54,7 +54,7 @@ test('cross-page sentence is complete in both pages while their scroll positions
   b.drawText('accuracy while reducing complexity.', { x: 40, y: 720, font, size: 12 });
   b.drawText('A separate result follows.', { x: 40, y: 700, font, size: 12 });
   await installBackend(page, undefined, await doc.save()); await open(page);
-  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   await expect(page.locator('.translation-page').first().locator('.translated-sentence')).toHaveCount(2);
   await page.evaluate(() => { (window as any).__firstSentence = document.querySelector('.translated-sentence'); });
   const before = await page.locator('.translation-content').evaluate(el => el.scrollTop);
@@ -169,7 +169,7 @@ test('same-size manuscript headings, paragraphs and typography survive translati
     sheet.drawText(text, { x: 65, y: 710 - i * 28, size: 12, font: i === 2 ? bold : i === 6 ? italic : font });
   });
   await installBackend(page, undefined, await doc.save()); await open(page);
-  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   await expect(page.locator('.translation-heading')).toHaveCount(1);
   await expect(page.locator('.translation-heading .translated-sentence')).toHaveCSS('font-weight', '700');
   await expect(page.locator('.translation-paragraph').last().locator('.translated-sentence')).toHaveCSS('font-style', 'italic');

@@ -313,7 +313,7 @@ async fn layout_and_original_equations_persist_locally_without_sending_coordinat
     let db = Mutex::new(db);
     let mut req = request();
     req.sentences[0].text = "We use [[PV_MATH_0]] in this sentence.".into();
-    req.sentences[0].layout = Some(SentenceLayout {
+    req.sentences[0].layout = Some(SentenceLayout { table: None,
         sources: vec![],
         typography: None,
         paragraph: 0,
@@ -354,7 +354,7 @@ async fn lost_or_duplicated_formula_markers_never_save_or_charge_and_invalid_geo
     let db = Mutex::new(db);
     let mut req = request();
     req.sentences[0].text = "[[PV_MATH_0]]".into();
-    req.sentences[0].layout = Some(SentenceLayout {
+    req.sentences[0].layout = Some(SentenceLayout { table: None,
         sources: vec![],
         typography: None,
         paragraph: 0,
@@ -487,7 +487,7 @@ fn latex_is_required_per_formula_and_streamed_as_a_complete_sentence() {
     use paper_vocabulary_lib::page_translation::{EquationGlyph, EquationSource, LayoutKind, SentenceLayout, SentenceStream};
     let mut req = request();
     req.sentences[0].text = "Energy is [[PV_MATH_1000]].".into();
-    req.sentences[0].layout = Some(SentenceLayout { paragraph: 0, kind: LayoutKind::Paragraph, sources: vec![], typography: None,
+    req.sentences[0].layout = Some(SentenceLayout { table: None, paragraph: 0, kind: LayoutKind::Paragraph, sources: vec![], typography: None,
         math: vec![EquationSource { token: "[[PV_MATH_1000]]".into(), text: "E = mc 2".into(), rect: [10., 20., 90., 40.],
             font_size: 12., page_number: Some(1), glyphs: vec![EquationGlyph { text: "2".into(), x: 33., y: 6., size: 7. }] }] });
     req.validate().unwrap();
@@ -511,5 +511,34 @@ fn latex_is_required_per_formula_and_streamed_as_a_complete_sentence() {
     value["sentences"][1]["translation"] = json!("Invented [[PV_MATH_9999]]");
     assert!(parse_result(&req, &value.to_string()).is_err());
     req.sentences[0].layout.as_mut().unwrap().math[0].glyphs[0].y = f64::NAN;
+    assert!(req.validate().is_err());
+}
+
+#[tokio::test]
+async fn table_cells_keep_their_grid_in_prompt_and_cache_and_reject_invalid_columns() {
+    use paper_vocabulary_lib::page_translation::{LayoutKind, SentenceLayout, TableCellLayout};
+    let db = Database::open(Path::new(":memory:")).unwrap();
+    register(&db);
+    let db = Mutex::new(db);
+    let mut req = request();
+    req.sentences[0].layout = Some(SentenceLayout {
+        paragraph: 0,
+        kind: LayoutKind::Table,
+        math: vec![],
+        sources: vec![],
+        typography: None,
+        table: Some(TableCellLayout { id: 0, row: 1, column: 0, columns: 3, header: false }),
+    });
+    req.validate().unwrap();
+    let body = request_body(&req);
+    let input: serde_json::Value = serde_json::from_str(body["input"].as_str().unwrap()).unwrap();
+    assert_eq!(input["sentences"][0]["kind"], "table");
+    assert_eq!(input["sentences"][0]["table"]["columns"], 3);
+    translate_page(&db, &req, || async { Ok(response(AiProvider::Chatgpt)) }).await.unwrap();
+    let saved = translate_page(&db, &req, || async { panic!("table metadata must survive caching") }).await.unwrap();
+    assert_eq!(saved.sentences[0].source.layout, req.sentences[0].layout);
+    req.sentences[0].layout.as_mut().unwrap().table.as_mut().unwrap().column = 3;
+    assert!(req.validate().is_err());
+    req.sentences[0].layout.as_mut().unwrap().table = None;
     assert!(req.validate().is_err());
 }

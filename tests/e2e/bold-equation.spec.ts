@@ -1,9 +1,9 @@
 import {test,expect} from '@playwright/test';
-import {installBackend,open} from './helpers';
+import {installBackend,open, startPageTranslation } from './helpers';
 import {makeBoldAbstractPdf,makeLabeledEquationPdf,comparison} from '../boldEquationFixture';
 for(const columns of [1,2])test(`bold abstract is translated in complete sentences, including its last line (${columns} columns)`,async({page})=>{
  await installBackend(page,undefined,await makeBoldAbstractPdf(columns));await open(page);
- await page.getByRole('button',{name:'본문 번역',exact:true}).click();await expect(page.locator('.translated-sentence').first()).toBeVisible();
+ await page.getByRole('button',{name:'본문 번역',exact:true}).click(); await startPageTranslation(page);await expect(page.locator('.translated-sentence').first()).toBeVisible();
  const source=await page.evaluate(()=>(window as any).__calls.find((c:any)=>c.command==='translate_page').args.request.sentences);
  const sentence=source.find((s:any)=>s.text===comparison);expect(sentence).toBeTruthy();expect(sentence.layout.kind).toBe('paragraph');expect(sentence.rects).toHaveLength(3);
  expect(source.some((s:any)=>s.text==='effectiveness of the proposed algorithm.')).toBe(false);
@@ -13,7 +13,7 @@ for(const columns of [1,2])test(`bold abstract is translated in complete sentenc
  await page.getByRole('button',{name:'확대',exact:true}).click();await expect(page.locator('.translation-source-mark')).toHaveCount(3);
 });
 test('descriptive subscripts and multiline cases render and copy as one LaTeX expression',async({page})=>{
- await installBackend(page,undefined,await makeLabeledEquationPdf());await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();
+ await installBackend(page,undefined,await makeLabeledEquationPdf());await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click(); await startPageTranslation(page);
  const formula=page.locator('.translation-equation .katex');await expect(formula).toHaveCount(1);
  await expect(page.locator('img.translation-equation, .katex-error')).toHaveCount(0);
  const sources=await page.evaluate(()=>(window as any).__calls.find((c:any)=>c.command==='translate_page').args.request.sentences);

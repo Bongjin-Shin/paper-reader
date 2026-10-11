@@ -80,7 +80,7 @@ export function isEquation(line: Line, runs: TextRun[]) {
   const mathematical = new Set(groups.flat());
   return line.runs.every(i => mathematical.has(i) || /^(?:[\s\d\p{P}\p{S}]+|if|update)$/u.test(runs[i].text.trim()));
 }
-export interface TextBlock { lines: Line[]; kind: NonNullable<SourceSentence['layout']>['kind'] }
+export interface TextBlock { lines: Line[]; kind: NonNullable<SourceSentence['layout']>['kind']; table?: NonNullable<SourceSentence['layout']>['table'] }
 /** Lines are layout hints, not translation units. Keep unfinished prose together
  * despite italics, superscripts, increased leading, or a column boundary. */
 export function textBlocks(lines: Line[], runs: TextRun[]): TextBlock[] {
