@@ -121,7 +121,7 @@ test('chat renders math and Markdown, accepts input while thinking and replaces 
   });
   await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
   await expect(page.getByLabel('구독 잔여 사용량')).toContainText('5시간 75% 남음');
-  await expect(page.getByLabel('구독 잔여 사용량')).toContainText('7일 60% 남음');
+  await expect(page.getByLabel('구독 잔여 사용량')).toContainText('주간 60% 남음');
   await page.getByLabel('논문 질문').fill('수식을 설명해줘'); await page.getByRole('button', { name: '질문 보내기', exact: true }).click();
   await expect(page.locator('.chat-answer .katex')).toHaveCount(2);
   await expect(page.locator('.chat-answer strong')).toHaveText('평활화된 잔차');

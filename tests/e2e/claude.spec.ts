@@ -16,7 +16,7 @@ test('Claude translation and chat have independent providers, models and effort 
   await page.getByLabel('채팅 모델',{exact:true}).selectOption('opus[1m]');
   await page.getByLabel('채팅 effort').selectOption('max');
   await expect(page.getByLabel('Claude 구독 사용량')).toContainText('5시간 76.5% 남음');
-  await expect(page.getByLabel('Claude 구독 사용량')).toContainText('7일 40% 남음');
+  await expect(page.getByLabel('Claude 구독 사용량')).toContainText('주간 40% 남음');
   await page.getByLabel('구독 사용량 새로고침').click();
   await expect(page.locator('.quota-refresh-turn')).toHaveCount(1);
   await page.getByLabel('논문 질문').fill('실험을 설명해줘'); await page.getByRole('button',{name:'질문 보내기',exact:true}).click();

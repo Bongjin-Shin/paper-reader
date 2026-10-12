@@ -138,6 +138,10 @@ export async function installBackend(page: Page, options = { delay: 0, fail: fal
           all.forEach(r => { if (ids.has(r.parentId)) ids.add(r.id); });
           localStorage.setItem('test-chat-head-' + args.paperId, String(Math.max(...ids))); return selectedChat(args.paperId);
         }
+        if (['get_subscription_usage', 'get_claude_subscription_usage'].includes(command) && (state as any).__subscriptionUsage) {
+          if ((state as any).__subscriptionUsageError) throw new Error('Usage unavailable');
+          return (state as any).__subscriptionUsage;
+        }
         if (command === 'get_claude_subscription_usage') {
           if ((state as any).__claudeQuotaError) throw new Error('Usage unavailable');
           return { updatedAt: Math.floor(Date.now() / 1000), buckets: localStorage.getItem('test-claude-connected') !== 'true' ? [] : [{ id: 'claude', name: 'Claude', primary: { usedPercent: 23.5, windowDurationMins: 300, resetsAt: Math.floor(Date.now() / 1000) + 3600 }, secondary: { usedPercent: 60, windowDurationMins: 10080, resetsAt: Math.floor(Date.now() / 1000) + 86400 } }] };

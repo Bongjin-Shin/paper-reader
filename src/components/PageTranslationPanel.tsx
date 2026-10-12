@@ -3,6 +3,8 @@ import { TranslationResizer, type TranslationWidth } from './TranslationPane';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { TranslatedText } from './TranslatedText';
 import type { usePageTranslation } from '../lib/usePageTranslation';
+import type { TextZoom } from '../lib/useTextZoom';
+import { TextZoomControls } from './TextZoomControls';
 
 type Translation = ReturnType<typeof usePageTranslation>;
 export function TranslationPage({ number, t, pdf, sizing }: { number: number; t: Translation; pdf: PDFDocumentProxy; sizing: TranslationWidth }) {
@@ -42,8 +44,8 @@ export function TranslationPage({ number, t, pdf, sizing }: { number: number; t:
     </div>
   </aside>;
 }
-export function TranslationNavigation({ translation: t, pageCount }: { translation: Translation; pageCount: number }) {
-  return <div className="reader-navigation"><nav className="translation-pagination" aria-label="번역 페이지">
+export function TranslationNavigation({ translation: t, pageCount, zoom }: { translation: Translation; pageCount: number; zoom: TextZoom }) {
+  return <div className="reader-navigation"><TextZoomControls zoom={zoom} label="번역" /><nav className="translation-pagination" aria-label="번역 페이지">
     <button aria-label="이전 번역 페이지" disabled={t.pageNumber <= 1} onClick={() => t.goTo(t.pageNumber - 1)}>←</button>
     <span>{t.pageNumber} / {pageCount} 페이지</span>
     <button aria-label="다음 번역 페이지" disabled={t.pageNumber >= pageCount} onClick={() => t.goTo(t.pageNumber + 1)}>→</button>

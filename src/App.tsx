@@ -4,6 +4,8 @@ import { dataMutationPending, restoreHistory, getLibrary, getPapers, deleteVocab
 import { loadPdf } from './lib/pdf';
 import { extractPaperMetadata } from './lib/paperMetadata';
 import { useTranslationWidth } from './components/TranslationPane';
+import { ChatResizer, useChatWidth } from './components/ChatPane';
+import { useTextZoom } from './lib/useTextZoom';
 import { PaperChat } from './components/PaperChat';
 import { TranslationNavigation } from './components/PageTranslationPanel';
 import { usePageTranslation } from './lib/usePageTranslation';
@@ -59,6 +61,10 @@ export default function App() {
   const [colorLoading, setColorLoading] = useState(true);
   const [removing, setRemoving] = useState(false);
   const scrollRef = useRef<HTMLElement>(null);
+  const readerLayoutRef = useRef<HTMLDivElement>(null), chatRef = useRef<HTMLDivElement>(null);
+  const chatWidth = useChatWidth(readerLayoutRef);
+  const translationZoom = useTextZoom('reader-translation-text-zoom', scrollRef, !!pdf, '.translation-page');
+  const chatZoom = useTextZoom('reader-chat-text-zoom', chatRef, !!pdf && chatOpen);
   const loadingRef = useRef<PDFDocumentLoadingTask | null>(null);
   const activePaperRef = useRef<string | null>(null);
   const bubbleIdRef = useRef(0);
@@ -469,9 +475,9 @@ export default function App() {
     {error && <div className="error-banner" role="alert"><span>{error}</span><button aria-label="오류 메시지 닫기" onClick={() => setError('')}>×</button></div>}
     <div className="workspace" inert={historyBusy}>
     {pdf && view === 'reader' && search.open && <PdfFindBar search={search} />}
-    {pdf && translation.open && view === 'reader' && <TranslationNavigation translation={translation} pageCount={pdf.numPages} />}
-    <div className="reader-layout">
-    <main ref={scrollRef} style={{ '--translation-width': `${translationWidth.width}px` } as CSSProperties} className={`reader ${translation.open ? 'reader-with-translation' : ''} ${pdf ? 'has-pdf' : ''} ${view !== 'reader' ? 'reader-inactive' : ''}`}
+    {pdf && translation.open && view === 'reader' && <TranslationNavigation translation={translation} pageCount={pdf.numPages} zoom={translationZoom} />}
+    <div className="reader-layout" ref={readerLayoutRef}>
+    <main ref={scrollRef} style={{ '--translation-width': `${translationWidth.width}px`, '--translation-font-size': `${15 * translationZoom.scale}px` } as CSSProperties} className={`reader ${translation.open ? 'reader-with-translation' : ''} ${pdf ? 'has-pdf' : ''} ${view !== 'reader' ? 'reader-inactive' : ''}`}
       tabIndex={-1} inert={view !== 'reader'} aria-hidden={view !== 'reader'}>
       {pdf ? <PdfPages key={pdf.loadingTask.docId} pdf={pdf} scale={zoom.renderScale} renderRevision={zoom.renderRevision} displayScale={zoom.scaleRef} highlights={highlights}
         translationMark={translation.mark} translation={translation} translationWidth={translationWidth} searchMatches={search.byPage} selectedSearchId={search.selected}
@@ -487,8 +493,11 @@ export default function App() {
         <p className="local-note"><span />PDF와 단어 기록은 이 기기에 보관됩니다.</p>
       </div>}
     </main>
-    {pdf && paper && (chatOpen || chatMountedFor === paper.id) && <div className="chat-container" hidden={!chatOpen || view !== 'reader'} inert={!chatOpen || view !== 'reader'} aria-hidden={!chatOpen || view !== 'reader'}>
-      <PaperChat key={paper.id} paper={paper} pdf={pdf} selectionRequest={chatSelection?.paperId === paper.id ? chatSelection : null}
+    {pdf && paper && (chatOpen || chatMountedFor === paper.id) && <div className="chat-container" ref={chatRef}
+      style={{ '--chat-width': `${chatWidth.width}px`, '--chat-font-size': `${13 * chatZoom.scale}px` } as CSSProperties}
+      hidden={!chatOpen || view !== 'reader'} inert={!chatOpen || view !== 'reader'} aria-hidden={!chatOpen || view !== 'reader'}>
+      <ChatResizer sizing={chatWidth} />
+      <PaperChat key={paper.id} paper={paper} pdf={pdf} zoom={chatZoom} selectionRequest={chatSelection?.paperId === paper.id ? chatSelection : null}
         onSelectionConsumed={consumeChatSelection} currentPage={() => {
         const host = scrollRef.current;
         const y = (host?.getBoundingClientRect().top ?? 0) + (host?.clientHeight ?? 0) * .3;

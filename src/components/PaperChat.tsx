@@ -9,11 +9,14 @@ import { ChatAnswer } from './ChatAnswer';
 import { SubscriptionQuota } from './SubscriptionQuota';
 import { ChatIcon } from './ChatIcons';
 import { ChatQuestion } from './ChatQuestion';
+import { TextZoomControls } from './TextZoomControls';
+import type { TextZoom } from '../lib/useTextZoom';
 
 type QueuedQuestion = { text: string; pageNumber?: number };
 
-export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionRequest, onSelectionConsumed }: {
+export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionRequest, onSelectionConsumed, zoom }: {
   paper: Paper; pdf: PDFDocumentProxy; currentPage: () => number; onPage: (number: number) => void; onClose: () => void;
+  zoom: TextZoom;
   selectionRequest: ChatSelection | null; onSelectionConsumed: () => void;
 }) {
   const [provider, setProvider] = useState<'chatgpt' | 'claude'>('chatgpt'), [providerBusy, setProviderBusy] = useState(true);
@@ -135,6 +138,7 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionR
   const actionDisabled = loading || providerBusy || controlling || (showStop ? !ready || stopping : (!!editing && !phase) || !question.trim());
   return <aside className="paper-chat" aria-label="논문 채팅">
     <header><div><strong>논문 채팅</strong><small title={paper.title}>{paper.title}</small></div><button aria-label="논문 채팅 닫기" onClick={onClose}>×</button></header>
+    <div className="chat-zoom-toolbar"><TextZoomControls zoom={zoom} label="채팅" /></div>
     <div className="chat-settings">
       <button aria-expanded={settings} onClick={() => setSettings(v => !v)}>{provider === 'claude' ? 'Claude' : 'ChatGPT'} 구독 · 모델 / effort {settings ? '▴' : '▾'}</button>
       {settings && <>

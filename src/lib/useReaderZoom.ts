@@ -109,7 +109,7 @@ export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDoc
     const observer = new ResizeObserver(() => { if (fittingRef.current) fit(); else callback.current(); });
     observer.observe(host);
     const wheel = (event: WheelEvent) => {
-      if (!event.ctrlKey || !pdf) return;
+      if (event.defaultPrevented || !event.ctrlKey || !pdf || (event.target instanceof Element && event.target.closest('.translation-page'))) return;
       event.preventDefault();
       if (!event.deltaY) return;
       clearTimeout(qualityTimer.current);
