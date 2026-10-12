@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState, useCallback, useRef, type FormEvent, type MouseEvent } from 'react';
 import { createLibraryFolder, deleteLibraryFolder, deleteLibraryPaper, errorMessage, getLibrary,
   moveLibraryFolder, moveLibraryPaper, moveLibraryPapers, deleteLibraryPapers, renameLibraryFolder, renameLibraryPaper, updatePaperMetadata, setPaperImportance, setPaperMemo } from '../lib/backend';
-import { sortLibraryPapers, type LibrarySort } from '../lib/librarySort';
+import { readLibrarySortPreference, saveLibrarySortPreference, sortLibraryPapers, type LibrarySort, type LibrarySortPreference } from '../lib/librarySort';
 import { LibraryMenu } from './LibraryMenu';
 import { PaperMemo } from './PaperMemo';
 import { useLibraryDrag, type LibraryDragItem } from '../lib/useLibraryDrag';
@@ -45,8 +45,7 @@ export const Library = memo(function Library({ active, revision, folderId, onFol
   const closeMenu = useCallback(() => setMenu(null), []);
   const paths = useMemo(() => new Map(data.folders.map(folder => [folder.id, ancestors(data.folders, folder.id)])), [data.folders]);
   const folder = data.folders.find(folder => folder.id === folderId);
-  const [sort, setSort] = useState<LibrarySort>('title');
-  const [direction, setDirection] = useState<'asc' | 'desc'>('asc');
+  const [{ key: sort, direction }, setSort] = useState(readLibrarySortPreference);
   const papers = useMemo(() => sortLibraryPapers(data.papers.filter(paper => paper.folderId === folderId), sort, direction), [data.papers, folderId, sort, direction]);
   const disabled = loading || !!loadError || busy || opening;
   const main = useRef<HTMLDivElement>(null), selectAll = useRef<HTMLInputElement>(null);
@@ -131,8 +130,11 @@ export const Library = memo(function Library({ active, revision, folderId, onFol
     data-sort-direction={sort === key ? direction : undefined}
     title={sort === key ? `현재 ${direction === 'asc' ? '오름차순' : '내림차순'} · 클릭하면 방향 변경` : `${label} 기준으로 정렬`}
     onClick={() => {
-      setDirection(sort === key ? direction === 'asc' ? 'desc' : 'asc' : key === 'title' || key === 'authors' ? 'asc' : 'desc');
-      setSort(key);
+      const next: LibrarySortPreference = { key,
+        direction: sort === key ? direction === 'asc' ? 'desc' : 'asc' : key === 'title' || key === 'authors' || key === 'memo' ? 'asc' : 'desc' };
+      setSort(next);
+      try { saveLibrarySortPreference(next); }
+      catch { setError('정렬 설정을 저장하지 못했습니다. 다음 실행 시 정렬이 초기화될 수 있습니다.'); }
     }}>{label}<span aria-hidden="true">{sort === key ? direction === 'asc' ? '↑' : '↓' : '↕'}</span></button>;
   const canDrop = (item: LibraryDragItem, target: number | null) => {
     if (disabled || !!edit || (target !== null && !data.folders.some(folder => folder.id === target))) return false;
@@ -262,8 +264,8 @@ export const Library = memo(function Library({ active, revision, folderId, onFol
         {!papers.length ? <div className="library-empty"><strong>이 위치에 저장된 논문이 없습니다.</strong>
           <p>상단의 PDF 추가 버튼을 누르거나<br />PDF 파일을 이 창에 끌어다 놓으세요.</p></div>
           : <div className="library-list-scroll"><div className="library-columns">
-            {sortColumn('title', '논문 제목')}<span>메모</span>{sortColumn('authors', '저자명')}
-            {sortColumn('publishedDate', '발행일')}{sortColumn('importance', '중요도')}{sortColumn('uploadedAt', '업로드 날짜')}</div>
+            {sortColumn('title', '논문 제목')}{sortColumn('importance', '중요도')}{sortColumn('memo', '메모')}
+            {sortColumn('authors', '저자명')}{sortColumn('publishedDate', '발행일')}{sortColumn('uploadedAt', '업로드 날짜')}</div>
             <ul className="library-papers" aria-label="저장된 논문">{papers.map(paper => <li key={paper.id} tabIndex={0}
               data-paper-id={paper.id} data-selection-id={paper.id} data-selected={selection.selected.has(paper.id)}
               onContextMenu={event => context(event, { kind: 'paper', paper })}
@@ -288,15 +290,19 @@ export const Library = memo(function Library({ active, revision, folderId, onFol
               <span className="library-pdf-icon" aria-hidden="true">PDF</span>
               <div><button className="library-open-paper" disabled={disabled} onClick={() => onOpen(paper)}>{paper.title}</button>
                 {paper.title !== paper.fileName && <small>{paper.fileName}</small>}</div></div>
+            <div className="library-rating" role="radiogroup" aria-label={`${paper.title} 중요도${paper.importance ? '' : ' (미지정)'}`}>
+              {[1, 2, 3, 4, 5].map(value => <label key={value} title={paper.importance === value ? `중요도 ${value}점 · 다시 누르면 해제` : `중요도 ${value}점`} data-filled={value <= paper.importance}>
+                <input type="radio" name={`importance-${paper.id}`} aria-label={`중요도 ${value}점`} value={value} checked={paper.importance === value}
+                  disabled={disabled} onClick={() => { if (paper.importance === value) void mutate(() => setPaperImportance(paper.id, 0)); }}
+                  onKeyDown={event => { if (event.key === ' ' && paper.importance === value) {
+                    event.preventDefault(); if (!event.repeat) void mutate(() => setPaperImportance(paper.id, 0));
+                  } }}
+                  onChange={() => void mutate(() => setPaperImportance(paper.id, value))} /><span aria-hidden="true">★</span>
+              </label>)}
+            </div>
             <PaperMemo title={paper.title} memo={paper.memo} disabled={disabled} onSave={memo => saveMemo(paper.id, memo)} />
             <span className="library-authors" title={paper.authors}>{paper.authors || '—'}</span>
             <span className="library-published">{paper.publishedDate || '—'}</span>
-            <div className="library-rating" role="radiogroup" aria-label={`${paper.title} 중요도${paper.importance ? '' : ' (미지정)'}`}>
-              {[1, 2, 3, 4, 5].map(value => <label key={value} title={`중요도 ${value}점`} data-filled={value <= paper.importance}>
-                <input type="radio" name={`importance-${paper.id}`} aria-label={`중요도 ${value}점`} value={value} checked={paper.importance === value}
-                  disabled={disabled} onChange={() => void mutate(() => setPaperImportance(paper.id, value))} /><span aria-hidden="true">★</span>
-              </label>)}
-            </div>
             <time className="library-uploaded" dateTime={paper.uploadedAt} title={paper.uploadedAt}>{paper.uploadedAt ? new Date(paper.uploadedAt).toLocaleDateString('sv-SE') : '—'}</time>
             </div>
             <div className="library-paper-actions"><button disabled={disabled} onClick={() => start({ kind: 'renamePaper', paper })}>이름 변경</button>

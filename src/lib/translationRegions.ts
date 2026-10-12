@@ -25,6 +25,9 @@ export function readingRegions(input: Line[], runs: TextRun[], pageHeight: numbe
     // caption labels usually end with punctuation or use smaller type.
     if (lineSize(first, runs) >= body * .94 && !/^(?:Fig(?:ure)?s?\.?|Table)\s*(?:\d+|[IVXLCDM]+)[.:\s]*$/i.test(text)
       && !/^(?:Fig(?:ure)?s?\.?|Table)\s*(?:\d+|[IVXLCDM]+)[.:]/i.test(text)) continue;
+    const previous = lines[i-1];
+    if (previous && !previous.kind && previous.column === first.column && lineSize(first,runs) >= body*.94
+      && first.top-previous.bottom < body && /(?:shown in|see|in|of|as|refer to)\s*$/i.test(textOf(previous,runs))) continue;
     const size = lineSize(first, runs), id = ++region;
     first.kind = 'caption'; first.region = id;
     for (let j = i + 1; j < lines.length; j++) {

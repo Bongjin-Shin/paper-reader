@@ -4,6 +4,7 @@ export interface ChatgptStatus { installed: boolean; connected: boolean; planTyp
 export interface ModelInfo { model: string; displayName: string; efforts: string[]; defaultEffort: string; isDefault: boolean }
 export interface ModelPreferences { translationModel: string; translationEffort: string; chatModel: string; chatEffort: string }
 export interface ChatExchange { id: number; question: string; answer: string; model: string; effort: string; followups: string[]; interrupted: boolean; parentId: number | null; variants: number[] }
+export interface ChatSelection { id: string; paperId: string; text: string; pages: number[] }
 export type PdfRect = [number, number, number, number];
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple';
 
@@ -108,11 +109,11 @@ export interface SavedHighlight {
   explanation: string | null;
 }
 
-export interface EquationGlyph { text: string; x: number; y: number; size: number }
-export interface EquationSource { token: string; text: string; rect: PdfRect; fontSize: number; pageNumber?: number; glyphs?: EquationGlyph[] }
+export interface EquationGlyph { text: string; x: number; y: number; size: number; width?: number }
+export interface EquationSource { token: string; text: string; rect: PdfRect; fontSize: number; pageNumber?: number; glyphs?: EquationGlyph[]; fractionBars?: [number, number, number][] }
 export interface RenderedEquation { token: string; latex: string }
 export interface SentenceTypography { fontScale: number; bold: boolean; italic: boolean }
-export interface TableCellLayout { id: number; row: number; column: number; columns: number; header: boolean }
+export interface TableCellLayout { id: number; row: number; column: number; columns: number; header: boolean; original?: PdfRect }
 export interface SentenceLayout { paragraph: number; kind: 'paragraph' | 'heading' | 'equation' | 'caption' | 'footnote' | 'header' | 'footer' | 'table'; math: EquationSource[];
   sources?: TranslationMark[]; typography?: SentenceTypography; table?: TableCellLayout }
 export interface SourceSentence { id: number; text: string; rects: PdfRect[]; layout?: SentenceLayout }

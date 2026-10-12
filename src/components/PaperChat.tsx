@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { ChatEdit, ChatExchange, Paper } from '../types';
+import type { ChatEdit, ChatExchange, ChatSelection, Paper } from '../types';
 import { askPaper, getChatProvider, setChatProvider, errorMessage, getPaperChat, steerPaperChat, stopPaperChat, selectChatBranch } from '../lib/backend';
 import { paperContext, readPaperText } from '../lib/paperContext';
 import { ClaudeConnection } from './ClaudeConnection';
@@ -10,20 +10,34 @@ import { SubscriptionQuota } from './SubscriptionQuota';
 import { ChatIcon } from './ChatIcons';
 import { ChatQuestion } from './ChatQuestion';
 
-export function PaperChat({ paper, pdf, currentPage, onPage, onClose }: {
+type QueuedQuestion = { text: string; pageNumber?: number };
+
+export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionRequest, onSelectionConsumed }: {
   paper: Paper; pdf: PDFDocumentProxy; currentPage: () => number; onPage: (number: number) => void; onClose: () => void;
+  selectionRequest: ChatSelection | null; onSelectionConsumed: () => void;
 }) {
   const [provider, setProvider] = useState<'chatgpt' | 'claude'>('chatgpt'), [providerBusy, setProviderBusy] = useState(true);
   useEffect(() => { let live = true; void getChatProvider().then(value => { if (live) setProvider(value); }).catch(e => { if (live) setError(errorMessage(e)); }).finally(() => { if (live) setProviderBusy(false); }); return () => { live = false; }; }, []);
   const [messages, setMessages] = useState<ChatExchange[]>([]), [question, setQuestion] = useState('');
+  const [selection, setSelection] = useState<ChatSelection | null>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
   const [loading, setLoading] = useState(true), [phase, setPhase] = useState(''), [error, setError] = useState('');
   const [pending, setPending] = useState({ question: '', answer: '', followups: [] as string[] });
   const [editing, setEditing] = useState<(ChatEdit & { text: string }) | null>(null), [editPending, setEditPending] = useState<ChatEdit | null>(null);
   const [ready, setReady] = useState(false), [controlling, setControlling] = useState(false), [stopping, setStopping] = useState(false);
-  const [queue, setQueue] = useState<string[]>([]), queueRef = useRef<string[]>([]);
+  const [queue, setQueue] = useState<QueuedQuestion[]>([]), queueRef = useRef<QueuedQuestion[]>([]);
   const [settings, setSettings] = useState(true), [revision, reload] = useState(0), [usageRevision, refreshUsage] = useState(0);
   const active = useRef(''), alive = useRef(true), controlLock = useRef(false), list = useRef<HTMLDivElement>(null), follow = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => {
+    if (!selectionRequest || selectionRequest.paperId !== paper.id) return;
+    setSelection(selectionRequest); onSelectionConsumed();
+  }, [selectionRequest, paper.id, onSelectionConsumed]);
+  useEffect(() => {
+    if (!selection || loading || editing) return;
+    const frame = requestAnimationFrame(() => input.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [selection, loading, editing]);
   useEffect(() => {
     let live = true; setLoading(true); setError('');
     void getPaperChat(paper.id).then(rows => { if (live) setMessages(rows); })
@@ -31,8 +45,8 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose }: {
     return () => { live = false; };
   }, [paper.id, revision]);
   useEffect(() => { if (list.current && follow.current) list.current.scrollTop = list.current.scrollHeight; }, [messages, phase, pending]);
-  const updateQueue = (values: string[]) => { queueRef.current = values; setQueue(values); };
-  const run = async (value: string, edit?: ChatEdit) => {
+  const updateQueue = (values: QueuedQuestion[]) => { queueRef.current = values; setQueue(values); };
+  const run = async (value: string, edit?: ChatEdit, sourcePage?: number) => {
     if (active.current || !alive.current) return;
     const id = crypto.randomUUID(); active.current = id; follow.current = true;
     if (!edit) setQuestion(draft => draft.trim() === value ? '' : draft);
@@ -42,7 +56,7 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose }: {
     setEditPending(edit ?? null);
     setPending({ question: firstQuestion, answer: '', followups: initialFollowups }); setReady(false); setStopping(false);
     setPhase('논문 본문을 읽는 중…'); setError('');
-    const page = currentPage(); let completed = false;
+    const page = sourcePage ?? currentPage(); let completed = false;
     try {
       const pages = await readPaperText(pdf);
       if (!alive.current) return;
@@ -67,18 +81,24 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose }: {
       if (alive.current) {
         setPhase(''); setReady(false); setStopping(false); setEditPending(null); refreshUsage(n => n + 1);
         if (completed && queueRef.current.length) {
-          const [next, ...rest] = queueRef.current; updateQueue(rest); void run(next);
+          const [next, ...rest] = queueRef.current; updateQueue(rest); void run(next.text, undefined, next.pageNumber);
         }
       }
     }
   };
   const send = async () => {
-    const value = question.trim();
-    if (!value || loading || providerBusy || controlLock.current || (editing && !active.current)) return;
-    if (!active.current) { void run(value); return; }
-    if (!ready || stopping) { updateQueue([...queueRef.current, value]); setQuestion(''); return; }
+    const draft = question.trim();
+    if (!draft || loading || providerBusy || controlLock.current || (editing && !active.current)) return;
+    const value = selection ? `선택한 원문 (PDF ${selection.pages.join(', ')}페이지):\n${selection.text}\n\n질문: ${draft}` : draft;
+    if (Array.from(value).length > 8000) { setError('선택한 원문과 질문을 합쳐 8,000자 이내로 입력해 주세요. 원문을 더 짧게 선택하거나 첨부를 해제할 수 있습니다.'); return; }
+    const clearDraft = () => {
+      setQuestion(current => current.trim() === draft ? '' : current);
+      setSelection(current => current?.id === selection?.id ? null : current);
+    };
+    if (!active.current) { clearDraft(); void run(value, undefined, selection?.pages[0]); return; }
+    if (!ready || stopping) { updateQueue([...queueRef.current, { text: value, pageNumber: selection?.pages[0] }]); clearDraft(); return; }
     controlLock.current = true; setControlling(true); setError(''); const id = active.current;
-    try { await steerPaperChat(id, value); if (alive.current) setQuestion(draft => draft.trim() === value ? '' : draft); }
+    try { await steerPaperChat(id, value); if (alive.current) clearDraft(); }
     catch (e) { if (alive.current) setError(errorMessage(e)); }
     finally { controlLock.current = false; if (alive.current) setControlling(false); }
   };
@@ -153,11 +173,16 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose }: {
       </article>}
     </div>
     {error && <div role="alert" className="chat-error">{error}<button disabled={!!phase} onClick={() => { setPending({ question: '', answer: '', followups: [] }); setEditing(null); reload(n => n + 1); }}>대화 다시 불러오기</button></div>}
-    {queue.length > 0 && <div className="chat-queue" aria-label="예약된 질문">{queue.map((q, i) => <div key={i}><span>다음 질문: {q}</span><button type="button" aria-label={`예약 질문 ${i + 1} 삭제`} onClick={() => updateQueue(queueRef.current.filter((_, n) => n !== i))}>×</button></div>)}
-      {!phase && <button disabled={loading || !!editing} onClick={() => { const [next, ...rest] = queueRef.current; updateQueue(rest); void run(next); }}>예약 질문 보내기</button>}
+    {queue.length > 0 && <div className="chat-queue" aria-label="예약된 질문">{queue.map((q, i) => <div key={i}><span>다음 질문: {q.text}</span><button type="button" aria-label={`예약 질문 ${i + 1} 삭제`} onClick={() => updateQueue(queueRef.current.filter((_, n) => n !== i))}>×</button></div>)}
+      {!phase && <button disabled={loading || !!editing} onClick={() => { const [next, ...rest] = queueRef.current; updateQueue(rest); void run(next.text, undefined, next.pageNumber); }}>예약 질문 보내기</button>}
     </div>}
     <form className="chat-composer" onSubmit={e => { e.preventDefault(); void send(); }}>
-      <textarea aria-label="논문 질문" placeholder={phase ? '답변 중에도 추가 질문을 입력할 수 있어요…' : '이 논문에 대해 질문하세요…'} value={question} maxLength={8000} disabled={loading || (!!editing && !phase)}
+      {selection && <section className="chat-selection" aria-label="AI 질문에 첨부한 원문">
+        <header><button type="button" className="chat-selection-source" onClick={() => onPage(selection.pages[0])}>선택한 원문 · {selection.pages.join(', ')}페이지</button>
+          <button type="button" className="chat-selection-remove" aria-label="선택한 원문 첨부 해제" onClick={() => setSelection(null)}>×</button></header>
+        <blockquote>{selection.text}</blockquote>
+      </section>}
+      <textarea ref={input} aria-label="논문 질문" placeholder={selection ? '선택한 부분에 대해 질문하세요…' : phase ? '답변 중에도 추가 질문을 입력할 수 있어요…' : '이 논문에 대해 질문하세요…'} value={question} maxLength={8000} disabled={loading || (!!editing && !phase)}
         onChange={e => setQuestion(e.target.value)} onKeyDown={e => {
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) { e.preventDefault(); void send(); }
         }} />

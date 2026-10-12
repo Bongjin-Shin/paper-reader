@@ -1,4 +1,4 @@
-import type { Highlight, HighlightColor, WordSelection } from '../types';
+import type { Highlight, HighlightColor } from '../types';
 
 export const highlightColors: { value: HighlightColor; label: string; css: string }[] = [
   { value: 'yellow', label: '노랑', css: '#f5d55380' },
@@ -9,7 +9,8 @@ export const highlightColors: { value: HighlightColor; label: string; css: strin
 ];
 export const highlightCss = (color: HighlightColor) => highlightColors.find(item => item.value === color)?.css ?? highlightColors[0].css;
 
-export function selectedHighlightIds(highlights: Highlight[], selection: WordSelection) {
-  return highlights.filter(highlight => selection.segments.some(segment => segment.pageNumber === highlight.pageNumber &&
-    segment.startOffset < highlight.position.endOffset && segment.endOffset > highlight.position.startOffset)).map(h => h.id);
+/** Resolve overlapping marks by their complete text length, not the clicked line's area. */
+export function highlightAt(highlights: Highlight[], x: number, y: number) {
+  return highlights.filter(h => h.position.rects.some(r => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]))
+    .sort((a, b) => (a.position.endOffset - a.position.startOffset) - (b.position.endOffset - b.position.startOffset) || a.id - b.id)[0];
 }

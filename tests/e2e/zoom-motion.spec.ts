@@ -89,7 +89,10 @@ test('continuous zoom retains text and replaces the sharp canvas without a blank
 test('zoom deep in a long document preserves the pointed PDF location and settled selection', async ({ page }) => {
   await installBackend(page, undefined, makeScrollPdf(120)); await open(page);
   const target = page.locator('.pdf-page[data-page-number="110"]');
-  await target.evaluate(el => { document.querySelector('.reader')!.scrollTop = (el as HTMLElement).offsetTop + 150; });
+  await target.evaluate(el => {
+    const reader = document.querySelector('.reader')!;
+    reader.scrollTop += el.getBoundingClientRect().top - reader.getBoundingClientRect().top + 150;
+  });
   await expect(target).toHaveAttribute('data-rendered-scale', '1.25');
   const point = await target.evaluate(el => {
     const bounds = el.getBoundingClientRect();
@@ -154,7 +157,8 @@ test('reversing zoom back to a cached scale reuses its surface and remains selec
 test('scrolling upward carries an attached bubble below the Reader instead of pushing it against the bottom', async ({ page }) => {
   await installBackend(page, undefined, makeScrollPdf(4)); await open(page);
   await page.locator('.pdf-page[data-page-number="2"]').evaluate(el => {
-    document.querySelector('.reader')!.scrollTop = (el as HTMLElement).offsetTop - 30;
+    const reader = document.querySelector('.reader')!;
+    reader.scrollTop += el.getBoundingClientRect().top - reader.getBoundingClientRect().top - 30;
   });
   await select(page, 'asymptotic', 20, 2);
   await page.getByRole('button', { name: '번역', exact: true }).click(); await expect(page.getByRole('dialog')).toContainText('점근적인');

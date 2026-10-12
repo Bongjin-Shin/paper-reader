@@ -261,3 +261,13 @@ fn shutdown_reaps_active_claude_inference() {
     assert!(task.join().unwrap().is_err());
     assert!(!client.is_chat("active"));
 }
+
+#[test]
+fn translation_cancellation_drops_cli_before_its_result_and_can_restart() {
+    use paper_vocabulary_lib::cancellation::Cancellation;
+    let (dir, client) = client("stop"); let cancel=Cancellation::default();
+    let result=client.lookup_stream_cancellable(payload(false),cancel.clone(),|_|cancel.cancel());
+    assert_eq!(result.unwrap_err(),paper_vocabulary_lib::cancellation::CANCELLED);
+    fs::write(dir.path().join("scenario"),"translation").unwrap();
+    assert!(client.lookup(payload(false)).is_ok());
+}

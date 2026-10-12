@@ -52,7 +52,7 @@ test('memo edits save multiline Unicode text per paper and survive sorting, reim
   await expect(row(page,'Paper A').locator('.library-memo-content')).toHaveText(memo);
   await page.screenshot({path:'.tools/library-memo-verification/memo.png'});
   const cells=await row(page,'Paper A').locator('.library-paper-details > *').evaluateAll(elements=>elements.map(el=>({x:el.getBoundingClientRect().x,cls:el.className})));
-  expect(cells.map(cell=>cell.cls).slice(0,3)).toEqual(['library-paper-title','library-memo','library-authors']);
+  expect(cells.map(cell=>cell.cls)).toEqual(['library-paper-title','library-rating','library-memo','library-authors','library-published','library-uploaded']);
   expect(cells[0].x).toBeLessThan(cells[1].x); expect(cells[1].x).toBeLessThan(cells[2].x);
   await page.setViewportSize({width:640,height:900});
   expect(await page.locator('.library-main').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
@@ -82,6 +82,30 @@ test('memo save failure retains draft, cancellation preserves the old value, and
   await row(page,'Paper B').getByRole('button',{name:'저장',exact:true}).click();
   await expect(row(page,'Paper B').locator('.library-memo-content')).toHaveText('메모 추가');
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('test-papers')!).find((p:any)=>p.id==='paper-b').memo)).toBe('');
+});
+
+test('columns follow the requested order and memos sort in both directions, with empty notes last and edits reordering rows', async ({ page }) => {
+  await installBackend(page); await page.goto('/');
+  await page.evaluate(() => {
+    const memos = ['검토 10\n추가 메모', '검토 2', '', ' \n '];
+    const papers = memos.map((memo, i) => ({ id: 'paper-' + i, title: 'Paper ' + i, fileName: i + '.pdf',
+      authors: 'Author ' + i, importance: i + 1, publishedDate: '2024', uploadedAt: '2026-01-01T00:00:00Z', memo }));
+    localStorage.setItem('test-papers', JSON.stringify(papers));
+    localStorage.setItem('test-library-memberships', JSON.stringify(papers.map(p => ({ paperId: p.id, folderId: null }))));
+  });
+  await library(page).click();
+  await expect(page.locator('.library-columns > button')).toHaveText(['논문 제목↑', '중요도↕', '메모↕', '저자명↕', '발행일↕', '업로드 날짜↕']);
+  const memoSort = page.getByRole('button', { name: '메모 정렬' });
+  await memoSort.click(); await expect(memoSort).toHaveAttribute('data-sort-direction', 'asc');
+  await expect(page.locator('.library-open-paper')).toHaveText(['Paper 1', 'Paper 0', 'Paper 2', 'Paper 3']);
+  await memoSort.click(); await expect(memoSort).toHaveAttribute('data-sort-direction', 'desc');
+  await expect(page.locator('.library-open-paper')).toHaveText(['Paper 0', 'Paper 1', 'Paper 2', 'Paper 3']);
+  await row(page, 'Paper 0').getByRole('button', { name: 'Paper 0 메모 편집' }).click();
+  await page.getByRole('textbox', { name: 'Paper 0 메모', exact: true }).fill('검토 1');
+  await row(page, 'Paper 0').getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.locator('.library-open-paper')).toHaveText(['Paper 1', 'Paper 0', 'Paper 2', 'Paper 3']);
+  await expect(row(page, 'Paper 0').locator('.library-memo-content')).toHaveText('검토 1');
+  await page.screenshot({ path: '.tools/selection-actions-qa/library.png' });
 });
 
 test('hardware back traverses one app visit per press without browser navigation or mouse-button interference', async ({ page }) => {

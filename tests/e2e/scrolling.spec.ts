@@ -16,7 +16,8 @@ async function fling(page: Page, numbers: number[]) {
   await page.evaluate(async numbers => {
     const reader = document.querySelector<HTMLElement>('.reader')!;
     for (const number of numbers) {
-      reader.scrollTop = document.querySelector<HTMLElement>(`.pdf-page[data-page-number="${number}"]`)!.offsetTop;
+      const target = document.querySelector<HTMLElement>(`.pdf-page[data-page-number="${number}"]`)!;
+      reader.scrollTop += target.getBoundingClientRect().top - reader.getBoundingClientRect().top;
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     }
   }, numbers);

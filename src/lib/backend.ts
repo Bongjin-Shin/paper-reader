@@ -92,9 +92,11 @@ export { isTauri };
 export const errorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error);
 export const getPageTranslation = (paperId: string, pageNumber: number) =>
   invoke<import('../types').PageTranslation | null>('get_page_translation', { paperId, pageNumber });
+export const beginPageTranslation = () => invoke<string>('begin_page_translation');
+export const cancelPageTranslation = (requestId: string) => invoke<void>('cancel_page_translation', { requestId });
 export const translatePage = (request: import('../types').PageTranslationRequest,
-  progress?: (rows: { id: number; translation: string; equations?: import('../types').RenderedEquation[] }[]) => void) => {
+  progress: (rows: { id: number; translation: string; equations?: import('../types').RenderedEquation[] }[]) => void, requestId: string) => {
   const onProgress = new Channel<{ id: number; translation: string; equations?: import('../types').RenderedEquation[] }[]>();
   onProgress.onmessage = rows => progress?.(rows);
-  return invoke<import('../types').PageTranslation>('translate_page', { request, onProgress });
+  return invoke<import('../types').PageTranslation>('translate_page', { request, onProgress, requestId });
 };

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist';
 import { dataMutationPending, restoreHistory, getLibrary, getPapers, deleteVocabulary, errorMessage, getHighlights, getHighlightColor, setHighlightColor, removeHighlights, getSavedHighlight, importLibraryPdf, importDroppedLibraryPdf, listenFileDrag, lookupText, lookupWord, openDroppedPdf, openPdf, readPdf, updatePaperMetadata } from './lib/backend';
 import { loadPdf } from './lib/pdf';
 import { extractPaperMetadata } from './lib/paperMetadata';
-import { TranslationPane } from './components/TranslationPane';
+import { useTranslationWidth } from './components/TranslationPane';
 import { PaperChat } from './components/PaperChat';
-import { PageTranslationPanel } from './components/PageTranslationPanel';
+import { TranslationNavigation } from './components/PageTranslationPanel';
 import { usePageTranslation } from './lib/usePageTranslation';
 import { usePaperClipboard } from './lib/usePaperClipboard';
 import { usePdfSearch } from './lib/usePdfSearch';
@@ -20,8 +20,8 @@ import { useReaderZoom } from './lib/useReaderZoom';
 import { useNavigation } from './lib/useNavigation';
 import { undoShortcut } from './lib/undoShortcut';
 import { useMouseNavigation } from './lib/useMouseNavigation';
-import type { ActionType, Highlight, HighlightColor, Paper, WordSelection } from './types';
-import { highlightColors, selectedHighlightIds } from './lib/highlights';
+import type { ActionType, ChatSelection, Highlight, HighlightColor, Paper, WordSelection } from './types';
+import { highlightColors } from './lib/highlights';
 
 function PaperIcon({ large = false }: { large?: boolean }) {
   return <svg width={large ? 38 : 23} height={large ? 44 : 27} viewBox="0 0 30 36" fill="none" aria-hidden="true">
@@ -37,6 +37,8 @@ export default function App() {
   const [bubbles, setBubbles] = useState<BubbleState[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMountedFor, setChatMountedFor] = useState<string>();
+  const [chatSelection, setChatSelection] = useState<ChatSelection | null>(null);
+  const consumeChatSelection = useCallback(() => setChatSelection(null), []);
   const [usageRevision, setUsageRevision] = useState(0);
   const [drag, setDrag] = useState<'valid' | 'invalid' | null>(null);
   const [opening, setOpening] = useState(false);
@@ -105,8 +107,9 @@ export default function App() {
   const onPageRendered = useCallback((pageNumber: number) => {
     if (bubblesRef.current.some(item => item.paperId === activePaperRef.current && item.selection.segments.some(segment => segment.pageNumber === pageNumber))) syncSelection();
   }, [syncSelection]);
-  const zoom = useReaderZoom(scrollRef, pdf, onZoomSettled);
   const translation = usePageTranslation(pdf, paper?.id, scrollRef, view === 'reader', () => setUsageRevision(n => n + 1));
+  const translationWidth = useTranslationWidth(scrollRef);
+  const zoom = useReaderZoom(scrollRef, pdf, onZoomSettled, translation.open ? translationWidth.width : 0);
   const search = usePdfSearch(pdf, scrollRef, view === 'reader');
   usePaperClipboard(scrollRef, translation, view === 'reader');
   const { scale } = zoom;
@@ -373,6 +376,13 @@ export default function App() {
     void showSavedHighlight(highlight.id, selection);
   }, [showSavedHighlight]);
 
+  const askAboutSelection = (bubble: BubbleState) => {
+    if (bubble.paperId !== activePaperRef.current) return;
+    setChatSelection({ id: crypto.randomUUID(), paperId: bubble.paperId, text: bubble.selection.word,
+      pages: [...new Set(bubble.selection.segments.map(segment => segment.pageNumber))] });
+    setChatMountedFor(bubble.paperId); setChatOpen(true); closeBubble(bubble.id);
+  };
+
   const handleAction = async (id: number, action: ActionType) => {
     const bubble = bubblesRef.current.find(item => item.id === id);
     if (!bubble || pendingRef.current.has(id) || bubble.status === 'loading') return;
@@ -405,7 +415,7 @@ export default function App() {
 
   const removableIds = (bubble: BubbleState) => bubble.savedHighlightId !== undefined
     ? highlights.filter(h => h.id === bubble.savedHighlightId).map(h => h.id)
-    : selectedHighlightIds(highlights, bubble.selection);
+    : [];
   const cancelHighlights = async (id: number) => {
     const bubble = bubblesRef.current.find(item => item.id === id);
     if (!paper || !bubble || removing) return;
@@ -459,11 +469,12 @@ export default function App() {
     {error && <div className="error-banner" role="alert"><span>{error}</span><button aria-label="오류 메시지 닫기" onClick={() => setError('')}>×</button></div>}
     <div className="workspace" inert={historyBusy}>
     {pdf && view === 'reader' && search.open && <PdfFindBar search={search} />}
+    {pdf && translation.open && view === 'reader' && <TranslationNavigation translation={translation} pageCount={pdf.numPages} />}
     <div className="reader-layout">
-    <main ref={scrollRef} className={`reader ${pdf ? 'has-pdf' : ''} ${view !== 'reader' ? 'reader-inactive' : ''}`}
+    <main ref={scrollRef} style={{ '--translation-width': `${translationWidth.width}px` } as CSSProperties} className={`reader ${translation.open ? 'reader-with-translation' : ''} ${pdf ? 'has-pdf' : ''} ${view !== 'reader' ? 'reader-inactive' : ''}`}
       tabIndex={-1} inert={view !== 'reader'} aria-hidden={view !== 'reader'}>
       {pdf ? <PdfPages key={pdf.loadingTask.docId} pdf={pdf} scale={zoom.renderScale} renderRevision={zoom.renderRevision} displayScale={zoom.scaleRef} highlights={highlights}
-        translationMark={translation.mark} searchMatches={search.byPage} selectedSearchId={search.selected}
+        translationMark={translation.mark} translation={translation} translationWidth={translationWidth} searchMatches={search.byPage} selectedSearchId={search.selected}
         onSelect={handleSelect} onRendered={onPageRendered} onHighlight={handleHighlight} /> : <div className="empty-state">
         <div className="empty-icon"><PaperIcon large /></div>
         <p className="eyebrow">읽기의 흐름을 이어가세요</p>
@@ -476,11 +487,9 @@ export default function App() {
         <p className="local-note"><span />PDF와 단어 기록은 이 기기에 보관됩니다.</p>
       </div>}
     </main>
-    {pdf && translation.open && <TranslationPane active={view === 'reader'}>
-      <PageTranslationPanel translation={translation} pageCount={pdf.numPages} pdf={pdf} />
-    </TranslationPane>}
     {pdf && paper && (chatOpen || chatMountedFor === paper.id) && <div className="chat-container" hidden={!chatOpen || view !== 'reader'} inert={!chatOpen || view !== 'reader'} aria-hidden={!chatOpen || view !== 'reader'}>
-      <PaperChat key={paper.id} paper={paper} pdf={pdf} currentPage={() => {
+      <PaperChat key={paper.id} paper={paper} pdf={pdf} selectionRequest={chatSelection?.paperId === paper.id ? chatSelection : null}
+        onSelectionConsumed={consumeChatSelection} currentPage={() => {
         const host = scrollRef.current;
         const y = (host?.getBoundingClientRect().top ?? 0) + (host?.clientHeight ?? 0) * .3;
         return Number([...host?.querySelectorAll<HTMLElement>('.pdf-page') ?? []].find(p => p.getBoundingClientRect().bottom >= y)?.dataset.pageNumber ?? 1);
@@ -496,10 +505,11 @@ export default function App() {
     {drag && <div className={`drop-overlay ${drag}`} role="status">
       <PaperIcon large /><strong>{drag === 'valid' ? view === 'library' ? '현재 폴더에 PDF 추가' : 'PDF를 놓아 열기' : 'PDF 파일을 놓아 주세요'}</strong>
     </div>}
-    <footer className="statusbar"><span role="status">{historyBusy ? '실행 취소/다시 실행 중…' : historyMessage || (view === 'library' ? 'Library' : view === 'vocabulary' ? 'Vocabulary' : pdf ? '단어 더블클릭 또는 텍스트 드래그 → 번역 · 설명' : 'PDF Reader')}</span>
+    <footer className="statusbar"><span role="status">{historyBusy ? '실행 취소/다시 실행 중…' : historyMessage || (view === 'library' ? 'Library' : view === 'vocabulary' ? 'Vocabulary' : pdf ? '단어 더블클릭 또는 텍스트 드래그 → 번역 · 설명 · AI질문' : 'PDF Reader')}</span>
       <span>{pdf && view === 'reader' ? `${pdf.numPages} 페이지` : '로컬 보관'}</span></footer>
     {pdf && bubbles.filter(bubble => bubble.paperId === paper?.id).map(bubble => <WordBubble pdf={pdf} key={bubble.id} bubble={bubble} reader={scrollRef}
       front={frontBubbleId === bubble.id} onAction={action => void handleAction(bubble.id, action)} onClose={() => closeBubble(bubble.id)}
+      onAskAI={() => askAboutSelection(bubble)}
       onPlace={placement => updateBubble(bubble.id, current => ({ ...current, placement }))}
       onActivate={() => activateBubble(bubble)} onDeactivate={() => { if (readerKeyTarget.current?.id === bubble.id && readerKeyTarget.current.kind === 'bubble') readerKeyTarget.current = null; }}
       onRemove={removableIds(bubble).length ? () => void cancelHighlights(bubble.id) : undefined} removing={removing} />)}

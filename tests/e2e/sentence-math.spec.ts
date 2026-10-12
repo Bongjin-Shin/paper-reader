@@ -19,12 +19,12 @@ test('Korean sentences flow in justified paragraphs at narrow and wide panel wid
  const paragraph=page.locator('.translation-paragraph').filter({has:page.locator('[data-sentence-id="1"]')});
  await expect(paragraph.locator('.translated-sentence')).toHaveCount(2);
  expect(await paragraph.evaluate(el=>getComputedStyle(el).textAlign)).toBe('justify');
- const handle=page.getByRole('separator',{name:'번역창 너비 조절'});await handle.focus();
+ const handle=page.getByRole('separator',{name:'1페이지 번역창 너비 조절'});await handle.focus();
  for(let i=0;i<8;i++)await page.keyboard.press('ArrowRight');
  const narrow=(await paragraph.boundingBox())!.height;
  for(let i=0;i<14;i++)await page.keyboard.press('ArrowLeft');
  expect((await paragraph.boundingBox())!.height).toBeLessThan(narrow);
- expect(await page.locator('.translation-content').evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+ expect(await page.locator('.translation-page-content').first().evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
  await page.locator('[data-sentence-id="1"]').focus();await page.keyboard.press('Enter');await expect(page.locator('[data-sentence-id="1"]')).toHaveAttribute('aria-pressed','true');
 });
 
@@ -37,12 +37,12 @@ for(const rotation of [0,90])test(`LaTeX formulas preserve scripts and fractions
  await expect(page.locator('.translated-sentences .katex-error')).toHaveCount(0);
  await expect(page.locator('.translated-sentences math mfrac')).toHaveCount(1);
  await expect(page.locator('.translated-sentences math msup')).toHaveCount(1);
- expect(await page.locator('.translation-content').textContent()).not.toContain('[[PV_MATH_');
+ expect(await page.locator('.translation-page-content').first().textContent()).not.toContain('[[PV_MATH_');
  const markup=await math.evaluateAll(els=>els.map(el=>el.innerHTML));
  const equation=page.locator('.translation-paragraph.translation-equation');await expect(equation).toHaveCount(1);
  await equation.locator('.translated-sentence').hover();await expect(page.locator('.translation-source-mark')).toHaveCount(1);
  const sourceBox=(await page.locator('.translation-source-mark').boundingBox())!;await page.mouse.move(sourceBox.x+sourceBox.width/2,sourceBox.y+sourceBox.height/2);await expect(equation.locator('.translated-sentence')).toHaveAttribute('aria-pressed','true');
- await page.getByRole('button',{name:'확대',exact:true}).click();await page.getByRole('separator',{name:'번역창 너비 조절'}).focus();await page.keyboard.press('ArrowLeft');
+ await page.getByRole('button',{name:'확대',exact:true}).click();await page.getByRole('separator',{name:'1페이지 번역창 너비 조절'}).focus();await page.keyboard.press('ArrowLeft');
  expect(await math.evaluateAll(els=>els.map(el=>el.innerHTML))).toEqual(markup);
  await page.screenshot({path:`.tools/sentence-math-verification/formulas-${rotation}.png`});
  await page.reload();await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();await expect(math).toHaveCount(2);await expect(page.locator('.translated-sentences math mfrac')).toHaveCount(1);

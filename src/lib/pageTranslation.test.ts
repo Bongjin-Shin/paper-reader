@@ -22,6 +22,16 @@ it('keeps single-column short headings with the text below', () => {
   const runs = [run('Introduction', 30, 10, 170), run('Full line', 30, 30, 570), run('Short line', 30, 45, 200)];
   expect(orderedLines(runs).flatMap(l => l.runs)).toEqual([0, 1, 2]);
 });
+it('never cuts a math placeholder at a sentence boundary, including adjacent punctuation', () => {
+  const text = 'The values are zero.[[PV_MATH_4020]] is a vector. Another value (1).[[PV_MATH_4030]] denotes a mask.';
+  const ranges = sentenceRanges(text);
+  for (const token of ['[[PV_MATH_4020]]', '[[PV_MATH_4030]]']) {
+    expect(ranges.filter(r => r.text.includes(token))).toHaveLength(1);
+    const start = text.indexOf(token), end = start + token.length;
+    expect(ranges.every(r => !(r.start > start && r.start < end) && !(r.end > start && r.end < end))).toBe(true);
+  }
+  expect(ranges.map(r => text.slice(r.start, r.end)).join(' ')).not.toMatch(/\[\[\s+PV_MATH/);
+});
 it('detects a narrow column gutter before merging adjacent line fragments', () => {
   const runs = [run('Left first', 30, 40, 295), run('Right first', 307, 40, 570),
     run('Left second', 30, 55, 295), run('Right second', 307, 55, 570)];

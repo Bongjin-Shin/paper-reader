@@ -74,3 +74,25 @@ it('keeps affiliation braces and author daggers as text while retaining math in 
  expect(mathGroups(lines[0],runs)).toEqual([]);
  expect(mathGroups(lines[1],runs)).toEqual([[6]]);
 });
+it('keeps nested superscripts with their base despite staggered lines in the other column',()=>{
+ const runs=[run('Prior prose covers the exponent area.',30,20,10),run('T',30,32,10,{math:true}),run('t',36,28.4,7,{math:true}),
+  run('in',42,32,10,{math:true}),run('R',54,32,10,{math:true}),run('(',60,28.4,7),run('k',64,28.4,7,{math:true}),run('m',68,29.4,5,{math:true}),
+  run('+1)',73,28.4,7),run('x',86,28.4,7,{math:true}),run('k',92,28.4,7,{math:true}),run('g',97,29.4,5,{math:true}),run('is a feature vector.',104,32,10),
+  run('Right column text.',320,22.4,10),run('Right column continues.',320,34.4,10),run('Left next sentence.',30,44,10),run('Right final sentence.',320,46.4,10)];
+ const lines=orderedLines(runs), formula=lines.find(l=>l.runs.includes(1))!;
+ for(let i=1;i<=12;i++)expect(formula.runs).toContain(i);
+ expect(lines.find(l=>l.runs.includes(0))!.runs).not.toContain(2);
+});
+it('keeps an entire cases equation together and separates equations in opposite columns',()=>{
+ const runs=[run('W = 1',(30),720,10,{math:true}),run('(1)',200,720,10),
+  run('⎧',360,60,10,{math:true}),run('sum',370,70,7,{math:true}),run('abs(x)',400,70,7),
+  run('w =',330,85,10,{math:true}),run('if x > 0',460,77,10,{math:true}),run('(2)',550,85,10),
+  run('eta',370,98,10,{math:true}),run('otherwise,',460,98,10),run('where the coefficient is defined.',320,115,10)];
+ const lines=[[0,1],[2],[3,4],[5,6,7],[8,9],[10]].map(ids=>({runs:ids,left:Math.min(...ids.map(i=>runs[i].left)),right:Math.max(...ids.map(i=>runs[i].right)),top:Math.min(...ids.map(i=>runs[i].top)),bottom:Math.max(...ids.map(i=>runs[i].bottom)),column:ids[0]<2?1:2}));
+ const blocks=textBlocks(lines,runs);expect(blocks.map(b=>b.kind)).toEqual(['equation','equation','paragraph']);
+ expect(blocks[1].lines.flatMap(l=>l.runs)).toEqual([2,3,4,5,6,7,8,9]);
+});
+it('does not classify a body reference to Fig. 2 as a floating caption',()=>{
+ const runs=[run('The network is shown in',320,100,10),run('Fig. 2. It can handle arbitrary inputs.',320,112,10),run('The model learns features.',320,124,10)];
+ const lines=orderedLines(runs);expect(readingRegions(lines,runs,792).every(l=>l.kind!=='caption')).toBe(true);
+});

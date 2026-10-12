@@ -31,11 +31,12 @@
     await until(ready); await wait(500);
     const host = document.querySelector('.reader');
     const pages = [...document.querySelectorAll('.pdf-page')];
+    const visit = page => { host.scrollTop += page.getBoundingClientRect().top - host.getBoundingClientRect().top; };
     for (const scenario of ['warm-scroll', 'cold-scroll', 'zoom']) {
       if (scenario === 'warm-scroll') {
-        host.scrollTop = pages[2].offsetTop; await wait(700); host.scrollTop = 0; await wait(700);
+        visit(pages[2]); await wait(700); host.scrollTop = 0; await wait(700);
       } else if (scenario === 'cold-scroll') {
-        host.scrollTop = pages[8].offsetTop; await wait(700);
+        visit(pages[8]); await wait(700);
       } else { host.scrollTop = 0; await until(ready); await wait(700); }
       let running = true, last = performance.now(), lastInput = 0, inputs = 0;
       const frames = [], processing = [], wheels = [], topBefore = host.scrollTop;
@@ -69,7 +70,7 @@
     const start=textNode(pages[0]), range=document.createRange(); range.setStart(start,0); range.collapse(true);
     window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
     start.parentElement.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0,clientX:300,clientY:150}));
-    for(let i=1;i<3;i++) { host.scrollTop=pages[i].offsetTop; await until(()=>textNode(pages[i])); await wait(80); }
+    for(let i=1;i<3;i++) { visit(pages[i]); await until(()=>textNode(pages[i])); await wait(80); }
     const end=textNode(pages[2]); range.setEnd(end,Math.min(8,end.length));
     window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
     document.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,button:0,clientX:450,clientY:400}));

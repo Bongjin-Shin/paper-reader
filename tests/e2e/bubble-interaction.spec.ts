@@ -60,6 +60,8 @@ test('Delete removes only the clicked highlight, is undoable and leaves vocabula
   await expect(page.locator('.word-highlight')).toHaveCount(2);
   expect(await page.evaluate(() => (window as any).__apiCalls)).toBe(2);
   await page.keyboard.press('Escape'); await select(page); await page.keyboard.press('Delete');
+  await expect(page.locator('.word-highlight')).toHaveCount(2);
+  await page.keyboard.press('Escape'); await clickHighlight(page); await page.keyboard.press('Delete');
   await expect(page.locator('.word-highlight')).toHaveCount(1);
 });
 

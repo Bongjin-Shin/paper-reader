@@ -301,8 +301,8 @@ impl Database {
     }
 
     pub fn set_paper_importance(&self, paper_id: &str, importance: u8) -> Result<(), String> {
-        if !(1..=5).contains(&importance) {
-            return Err("중요도는 별 1~5개로 선택해 주세요.".into());
+        if importance > 5 {
+            return Err("중요도는 별 0~5개로 선택해 주세요.".into());
         }
         if self.connection.execute("UPDATE papers SET importance = ?2 WHERE id = ?1 AND EXISTS(SELECT 1 FROM library_papers WHERE paper_id = ?1)", params![paper_id, importance]).map_err(db_error)? == 0 {
             return Err("Library에서 논문을 찾을 수 없습니다.".into());

@@ -92,7 +92,7 @@ test('PDF import extracts title author and publication date, and metadata/rating
   await installBackend(page, undefined, await paperPdf()); await page.goto('/'); await library(page);
   await page.getByRole('button', { name: 'PDF 추가', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Learning from Context', exact: true })).toBeVisible();
-  await expect(page.locator('.library-columns')).toHaveText('논문 제목↑메모저자명↕발행일↕중요도↕업로드 날짜↕');
+  await expect(page.locator('.library-columns')).toHaveText('논문 제목↑중요도↕메모↕저자명↕발행일↕업로드 날짜↕');
   await expect(page.locator('.library-authors')).toHaveText('Alice Smith; Bob Lee');
   await expect(page.locator('.library-published')).toHaveText('2023-09-20');
   await expect(page.locator('.library-uploaded')).toHaveText('2026-09-22');
@@ -126,4 +126,37 @@ test('native file-drop extracts a first-page title and failed rating saves leave
   await expect(page.getByRole('radio', { name: '중요도 5점' })).not.toBeChecked();
   await page.evaluate(() => { (window as any).__libraryMutationFail = false; });
   await page.getByRole('radio', { name: '중요도 5점' }).check(); await expect(page.getByRole('radio', { name: '중요도 5점' })).toBeChecked();
+});
+
+test('clicking the selected star clears importance; other stars update it and clearing survives reload', async ({ page }) => {
+  await installBackend(page); await open(page); await library(page);
+  const rating = (n: number) => page.getByRole('radio', { name: `중요도 ${n}점`, exact: true });
+  for (const n of [3, 2, 4, 3]) {
+    await rating(n).click(); await expect(rating(n)).toBeChecked();
+    await expect(page.locator('.library-rating [data-filled="true"]')).toHaveCount(n);
+  }
+  await rating(3).click();
+  await expect(page.locator('.library-rating input:checked')).toHaveCount(0);
+  await expect(page.locator('.library-rating [data-filled="true"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__calls.filter((call: any) => call.command === 'set_paper_importance')
+    .map((call: any) => call.args.importance))).toEqual([3, 2, 4, 3, 0]);
+  await page.reload(); await library(page);
+  await expect(page.getByRole('radiogroup')).toHaveAccessibleName('test-paper.pdf 중요도 (미지정)');
+  await expect(page.locator('.library-rating input:checked')).toHaveCount(0);
+  // Preserve native radio keyboard navigation, including clearing with Space.
+  await rating(2).focus(); await page.keyboard.press('Space'); await expect(rating(2)).toBeChecked();
+  await rating(2).focus(); await page.keyboard.press('ArrowRight'); await expect(rating(3)).toBeChecked();
+  await rating(3).focus(); await page.keyboard.press('Space');
+  await expect(page.locator('.library-rating input:checked')).toHaveCount(0);
+});
+
+test('failed importance clearing keeps the current stars and allows retry', async ({ page }) => {
+  await installBackend(page); await open(page); await library(page);
+  const selected = page.getByRole('radio', { name: '중요도 3점', exact: true });
+  await selected.click(); await expect(selected).toBeChecked();
+  await page.evaluate(() => { (window as any).__libraryMutationFail = true; });
+  await selected.click(); await expect(page.getByRole('alert')).toContainText('Library 변경에 실패');
+  await expect(selected).toBeChecked(); await expect(page.locator('.library-rating [data-filled="true"]')).toHaveCount(3);
+  await page.evaluate(() => { (window as any).__libraryMutationFail = false; });
+  await selected.click(); await expect(page.locator('.library-rating input:checked')).toHaveCount(0);
 });

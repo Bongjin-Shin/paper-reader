@@ -1,9 +1,10 @@
 import type { SourceSentence } from '../types';
 import type { TextRun, Line } from './pageTranslation';
+import type { HorizontalRule } from './translationTables';
 
 export const mathFont = /(?:CMMI|CMSY|CMEX|MSAM|MSBM|MTMI|MTSY|MTEX|Math|Symbol|Euler)/i;
-const mathSign = /[=<>≤≥≠≈≡±×÷∈∉∋⊂⊃⊆⊇∪∩∑∏∫√∞∂∇∅⋃⋂]/u;
-const mathPart = /^(?:[\p{L}\d]{1,2}|sin|cos|tan|log|ln|exp|lim|arg|min|max|loc|if|update|s\.t\.)[\s\d\p{P}\p{S}]*$/u;
+const mathSign = /[=<>≤≥≼≽≺≻≠≈≡±×÷∈∉∋⊂⊃⊆⊇∪∩∑∏∫√∞∂∇∅⋃⋂]/u;
+const mathPart = /^(?:[\p{L}\d]{1,2}|sin|cos|tan|log|ln|exp|lim|arg|min|max|loc|abs|Softmax|Concat|MHA|Attention|if|otherwise|update|s\.t\.)[\s\d\p{P}\p{S}]*$/u;
 export const runSize = (r: TextRun) => r.fontSize ?? r.bottom - r.top;
 /** Symbol fonts can report oversized selection boxes, especially accents and
  * extensible operators. Stop inline crops before adjacent prose's actual ink. */
@@ -61,8 +62,8 @@ export function mathGroups(line: Line, runs: TextRun[]): number[][] {
   // Braces around affiliation emails and author daggers are not equations by
   // themselves. They can still join a group containing actual mathematical text.
   const seed = (i: number) => (!!runs[i].math && !/^[{}†‡]+$/.test(runs[i].text.trim()))
-    || (mathSign.test(runs[i].text) && (runs[i].text.match(/[A-Za-z]{3,}/g) ?? []).every(w => /^(?:sin|cos|tan|log|exp|lim|arg|min|max|loc|update)$/.test(w)));
-  const candidate = (i: number) => seed(i) || (!/^(?:[.!?;:]|we|in|is|to|of|an|as|or|at|by|be|on|a)$/i.test(runs[i].text.trim())
+    || (mathSign.test(runs[i].text) && (runs[i].text.match(/[A-Za-z]{3,}/g) ?? []).every(w => /^(?:sin|cos|tan|log|exp|lim|arg|min|max|loc|abs|Softmax|Concat|MHA|Attention|update)$/.test(w)));
+  const candidate = (i: number) => seed(i) || (!/^(?:[.!?;:]|we|in|is|to|of|an|as|or|at|by|be|on|a)[:;]?$/i.test(runs[i].text.trim())
     && (label(i) || mathPart.test(runs[i].text.trim()) || /^(?:min|max|arg\s*(?:min|max))\s+[A-Za-z]$/.test(runs[i].text.trim())
       || /^[\s\d\p{P}\p{S}]+$/u.test(runs[i].text)));
   let group: number[] = [];
@@ -78,7 +79,24 @@ export function isEquation(line: Line, runs: TextRun[]) {
   const groups = mathGroups(line, runs);
   if (!groups.length) return false;
   const mathematical = new Set(groups.flat());
-  return line.runs.every(i => mathematical.has(i) || /^(?:[\s\d\p{P}\p{S}]+|if|update)$/u.test(runs[i].text.trim()));
+  return line.runs.every(i => mathematical.has(i) || /^(?:[\s\d\p{P}\p{S}]+|if|otherwise,?|abs\([^)]*\)?|= Softmax\(|MHA|= Concat|update)$/u.test(runs[i].text.trim()));
+}
+/** A fraction's isolated numerator can share a baseline with the other column's
+ * prose. Vector fraction bars keep it with the equation below, instead of the
+ * preceding paragraph. Long prose and table rules cannot establish a fraction. */
+export function fractionRuns(runs: TextRun[], rules: HorizontalRule[]) {
+  const used = new Set<number>();
+  const fractions: HorizontalRule[] = [];
+  for (const rule of rules) {
+    const nearby = runs.flatMap((r, i) => r.left >= rule.left - 1 && r.right <= rule.right + 1
+      && Math.abs((r.baseline ?? r.bottom) - rule.top) < runSize(r) * 2
+      && (r.math || /^[\s\d\p{P}\p{S}]+$/u.test(r.text) || /^(?:abs|sin|cos|tan|log|exp)\(?$/.test(r.text)) ? [i] : []);
+    const above = nearby.filter(i => (runs[i].baseline ?? runs[i].bottom) < rule.top + .5);
+    const below = nearby.filter(i => (runs[i].baseline ?? runs[i].bottom) > rule.top + .5);
+    if (!above.length || !below.length || !nearby.some(i => runs[i].math)) continue;
+    fractions.push(rule); nearby.forEach(i => used.add(i));
+  }
+  return { used, fractions };
 }
 export interface TextBlock { lines: Line[]; kind: NonNullable<SourceSentence['layout']>['kind']; table?: NonNullable<SourceSentence['layout']>['table'] }
 /** Lines are layout hints, not translation units. Keep unfinished prose together
@@ -109,7 +127,7 @@ export function textBlocks(lines: Line[], runs: TextRun[]): TextBlock[] {
     const paragraphBreak = kind === 'paragraph' && terminal && (gap > body * .6 || (previous && line.left - previous.left > body * .6));
     const split = !prior || !previous || kind !== prior.kind || line.region !== previous.region
       || (kind === 'heading' && !headingContinuation)
-      || (differentColumn && !continuesColumn && !headingContinuation)
+      || (differentColumn && (kind === 'equation' || !continuesColumn) && !headingContinuation)
       || (kind === 'equation' && gap > body * 2)
       || paragraphBreak || (gap > body * 5);
     if (split) blocks.push({lines:[line],kind}); else prior.lines.push(line);

@@ -218,6 +218,18 @@ impl CodexClient {
     ) -> Result<AiResult, String> {
         self.with_session(|session| session.lookup(payload, &mut progress))
     }
+    pub fn lookup_stream_cancellable(&self, payload: Value, cancellation: crate::cancellation::Cancellation, mut progress: impl FnMut(&str)) -> Result<AiResult, String> {
+        cancellation.check()?;
+        self.with_session(|session| {
+            cancellation.check()?;
+            session.cancellation = Some(cancellation);
+            let result = session.lookup(payload, &mut progress);
+            session.cancellation = None;
+            session.translation_turn = None;
+            result
+        })
+    }
+
 }
 
 pub fn validate_login_url(raw: &str) -> Result<(), String> {
@@ -246,6 +258,8 @@ struct Session {
     generation: Arc<AtomicU64>,
     started_generation: u64,
     cleanup_failed: bool,
+    cancellation: Option<crate::cancellation::Cancellation>,
+    translation_turn: Option<(String, String)>,
 }
 
 impl Drop for Session {
@@ -385,6 +399,8 @@ impl Session {
             generation,
             started_generation,
             cleanup_failed: false,
+            cancellation: None,
+            translation_turn: None,
         };
         session.request("initialize", json!({"clientInfo": {"name": "paper_vocabulary", "title": "Paper Vocabulary", "version": env!("CARGO_PKG_VERSION")}}))?;
         session.send(json!({"method": "initialized", "params": {}}))?;
@@ -405,6 +421,13 @@ impl Session {
         }
     }
     fn receive_tick(&mut self, deadline: Instant) -> Result<Option<Value>, String> {
+        if self.cancellation.as_ref().is_some_and(|c| c.is_cancelled()) {
+            if let Some((thread, turn)) = self.translation_turn.take() {
+                self.sequence += 1;
+                let _ = self.send(json!({"id":self.sequence,"method":"turn/interrupt","params":{"threadId":thread,"turnId":turn}}));
+            }
+            return Err(crate::cancellation::CANCELLED.into());
+        }
         if self.generation.load(Ordering::SeqCst) != self.started_generation {
             return Err("ChatGPT 요청이 취소되었습니다.".into());
         }
@@ -597,6 +620,7 @@ impl Session {
             .as_str()
             .ok_or("ChatGPT 번역 요청을 시작하지 못했습니다.")?
             .to_owned();
+        self.translation_turn = Some((thread_id.clone(), turn_id.clone()));
         let deadline = Instant::now()
             + if payload["paperChat"] == true {
                 Duration::from_secs(300)

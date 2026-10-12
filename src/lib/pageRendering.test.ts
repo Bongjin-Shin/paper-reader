@@ -100,8 +100,12 @@ describe('viewport scheduling during fast scroll', () => {
       getRangeAt: () => ({ intersectsNode: (host: HTMLElement) => selected.has(host) }) }) });
     const reader = Object.assign(new EventTarget(), { scrollTop: 0, scrollLeft: 0 });
     const cache = new PageRenderCache();
-    const page = (top: number) => {
-      const host = { dataset: {}, closest: () => reader, offsetTop: top, offsetLeft: 0, offsetWidth: 600, offsetHeight: 1000 } as unknown as HTMLElement;
+    const positions = new Map<HTMLElement, number>();
+    const page = (top: number, paired = false) => {
+      const host = { dataset: {}, closest: () => reader, offsetTop: paired ? 0 : top, offsetLeft: 0,
+        offsetParent: paired ? { offsetTop: top, offsetLeft: 0, offsetParent: reader } : reader,
+        offsetWidth: 600, offsetHeight: 1000 } as unknown as HTMLElement;
+      positions.set(host, top);
       const update = vi.fn(); const stop = cache.observe(host, update);
       return { host, update, stop };
     };
@@ -109,7 +113,7 @@ describe('viewport scheduling during fast scroll', () => {
       const observer = observers.find(o => kind === 'near' ? o.options.rootMargin : !o.options.rootMargin)!;
       const margin = kind === 'near' ? 900 : 0;
       observer.callback(hosts.map(host => {
-        const top = host.offsetTop - reader.scrollTop;
+        const top = positions.get(host)! - reader.scrollTop;
         const height = Math.max(0, Math.min(top + 1000, 800 + margin) - Math.max(top, -margin));
         return { target: host, isIntersecting: height > 0, rootBounds: { width: 1000, height: 800 },
           intersectionRect: { width: 600, height }, boundingClientRect: { top, left: 0, width: 600, height: 1000 } };
@@ -119,9 +123,9 @@ describe('viewport scheduling during fast scroll', () => {
     return { cache, page, notify, scroll, reader, selected, observers };
   }
 
-  it('prioritizes the destination and cancels passed work before another observer delivery', () => {
+  it.each([false, true])('prioritizes the destination and cancels passed work before another observer delivery (paired=%s)', paired => {
     const { cache, page, notify, scroll, reader } = setup();
-    const old = page(0), target = page(1024), next = page(2048);
+    const old = page(0, paired), target = page(1024, paired), next = page(2048, paired);
     const hosts = [old.host, target.host, next.host];
     notify('visible', hosts); notify('near', hosts);
     expect(cache.continueRendering(old.host)).toBe(true);

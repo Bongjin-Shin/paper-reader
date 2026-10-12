@@ -45,14 +45,14 @@ export async function extractPageWithContinuations(pdf: PDFDocumentProxy, number
       if (!continues(previous.last, parts[0])) break;
       parts.unshift(previous.last!);
       if (previous.first !== previous.last) break;
-      if (parts.reduce((n, s) => n + s.text.length, 0) > 20000) throw new Error('페이지에 걸친 문장이 너무 깁니다. 필요한 부분을 선택해 번역해 주세요.');
+      if (parts.reduce((n, s) => n + s.text.length, 0) > 1_000_000) throw new Error('페이지에 걸친 문장이 너무 깁니다. 필요한 부분을 선택해 번역해 주세요.');
     }
     if (sentence === edges.last) for (let page = number + 1; page <= pdf.numPages; page++) {
       const next = bodyEdges(await read(pdf, page).catch(() => []));
       if (!continues(parts.at(-1), next.first)) break;
       parts.push(next.first!);
       if (next.first !== next.last) break;
-      if (parts.reduce((n, s) => n + s.text.length, 0) > 20000) throw new Error('페이지에 걸친 문장이 너무 깁니다. 필요한 부분을 선택해 번역해 주세요.');
+      if (parts.reduce((n, s) => n + s.text.length, 0) > 1_000_000) throw new Error('페이지에 걸친 문장이 너무 깁니다. 필요한 부분을 선택해 번역해 주세요.');
     }
     if (parts.length > 1) output[sentence.id] = joinContinuation(parts, sentence);
   }

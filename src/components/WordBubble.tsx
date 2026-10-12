@@ -17,7 +17,7 @@ export interface BubbleState {
   savedResults?: { translation: string | null; explanation: string | null };
 }
 
-export function WordBubble({ pdf, bubble, reader, onAction, onRemove, removing, onClose, onActivate, onDeactivate, onPlace, front }: { pdf: PDFDocumentProxy; bubble: BubbleState; reader: RefObject<HTMLElement | null>; onAction: (action: ActionType) => void;
+export function WordBubble({ pdf, bubble, reader, onAction, onAskAI, onRemove, removing, onClose, onActivate, onDeactivate, onPlace, front }: { pdf: PDFDocumentProxy; bubble: BubbleState; reader: RefObject<HTMLElement | null>; onAction: (action: ActionType) => void; onAskAI: () => void;
   front: boolean; onPlace: (placement: BubblePlacement) => void; onRemove?: () => void; removing?: boolean; onClose: () => void; onActivate: () => void; onDeactivate: () => void }) {
   const drag = useBubblePosition(bubble, onRemove !== undefined, reader, onPlace);
 
@@ -34,6 +34,8 @@ export function WordBubble({ pdf, bubble, reader, onAction, onRemove, removing, 
       <button onClick={() => onAction('translation')}>번역</button>
       <span className="bubble-divider" />
       <button onClick={() => onAction('explanation')}>설명</button>
+      <span className="bubble-divider" />
+      <button onClick={onAskAI}>AI질문</button>
       {removeButton}
     </> : <div className={`result-content ${bubble.selection.isSingleWord ? '' : 'phrase-result'}`}>
       <strong lang="en">{bubble.selection.word}</strong>

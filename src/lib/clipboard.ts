@@ -5,7 +5,7 @@ export function selectedText(node: Text, range: Range): string {
   return node.data.slice(range.startContainer === node ? range.startOffset : 0,
     range.endContainer === node ? range.endOffset : node.length);
 }
-const blockTags = new Set(['P','DIV','SECTION','ARTICLE','BLOCKQUOTE','UL','OL','PRE']);
+const blockTags = new Set(['P','DIV','SECTION','ARTICLE','ASIDE','BLOCKQUOTE','UL','OL','PRE']);
 /** Serialize selected content against the original DOM so a partial selection
  * inside KaTeX can still reach its complete, authoritative TeX annotation. */
 export function selectedMarkdown(root: Element, range: Range): string {
@@ -17,7 +17,7 @@ export function selectedMarkdown(root: Element, range: Range): string {
       const latex = node.querySelector('annotation[encoding="application/x-tex"]')?.textContent;
       return latex ? mathMarkdown(latex, node.matches('.katex-display') || !!node.closest('.katex-display')) : '';
     }
-    if (node.matches('[aria-hidden="true"], .translation-page-header, .translation-region-label, [role="status"], [role="alert"], button, script, style')) return '';
+    if (node.matches('[aria-hidden="true"], .pdf-page, .translation-resizer, .translation-page-header, .translation-region-label, [role="status"], [role="alert"], button, script, style')) return '';
     if (node.tagName === 'BR') return '\n';
     const content = [...node.childNodes].map(visit).join('');
     if (!content.trim()) return content;

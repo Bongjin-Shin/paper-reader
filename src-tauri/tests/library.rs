@@ -343,10 +343,11 @@ fn metadata_and_importance_persist_without_overwriting_corrections_or_originals(
     };
     db.update_paper_metadata(&paper.id, &manual, false).unwrap();
     db.update_paper_metadata(&paper.id, &value, true).unwrap();
-    for n in [1, 2, 3, 4, 5] {
+    for n in [1, 2, 3, 0, 4, 5] {
         db.set_paper_importance(&paper.id, n).unwrap();
+        assert_eq!(db.library().unwrap().papers[0].importance, n);
     }
-    for n in [0, 6, 255] {
+    for n in [6, 255] {
         assert!(db.set_paper_importance(&paper.id, n).is_err());
     }
     assert!(db.set_paper_importance("missing", 3).is_err());

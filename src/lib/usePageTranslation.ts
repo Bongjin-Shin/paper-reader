@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PageTranslation, TranslatedSentence, TranslationMark } from '../types';
-import { errorMessage, getPageTranslation, translatePage } from './backend';
+import { errorMessage, getPageTranslation, translatePage, beginPageTranslation, cancelPageTranslation } from './backend';
 import { extractPageWithContinuations } from './pageContinuations';
 import { pdfToStyle } from './selection';
 
-type Entry = { preview?: PageTranslation; data: PageTranslation | null; checked: boolean; error: string; phase: string; job?: Promise<void> };
+type Run = { cancelled: boolean; translate: boolean; requestId?: string };
+type Entry = { started?: boolean; stopped?: boolean; run?: Run; preview?: PageTranslation; data: PageTranslation | null; checked: boolean; error: string; phase: string; job?: Promise<void> };
 function visiblePage(reader: HTMLElement) {
   const pages = reader.querySelectorAll<HTMLElement>('.pdf-page');
   const y = reader.getBoundingClientRect().top + reader.clientHeight * .3;
@@ -25,44 +26,83 @@ export function usePageTranslation(pdf: PDFDocumentProxy | null, paperId: string
   const usage = useRef(onUsage); usage.current = onUsage;
   const refresh = useCallback(() => { if (current.current === store) update(n => n + 1); }, [store]);
 
+  const stop = useCallback(async (number: number) => {
+    const entry = store.entries.get(number), run = entry?.run;
+    if (!entry || !run) return;
+    run.cancelled = true; entry.run = undefined; entry.job = undefined;
+    entry.phase = ''; entry.stopped = true; entry.error = ''; refresh();
+    if (run.requestId) {
+      try { await cancelPageTranslation(run.requestId); }
+      catch (error) { if (!entry.run) { entry.error = errorMessage(error); refresh(); } }
+    }
+  }, [store, refresh]);
   const load = useCallback(async (number: number, translate: boolean, force = false) => {
     if (!store.pdf || !store.paperId) return;
     let entry = store.entries.get(number);
     if (!entry) { entry = { data: null, checked: false, error: '', phase: '' }; store.entries.set(number, entry); }
-    if (entry.job && force) return;
+    if (entry.job && force) void stop(number);
     while (entry.job) { await entry.job; if (!translate || entry.data || current.current !== store) return; }
     if (!force && (entry.data || (!translate && entry.checked))) return;
-    const target = entry;
-    target.error = ''; target.phase = '저장된 번역 확인 중…';
+    const target = entry, run: Run = { cancelled: false, translate };
+    target.run = run; target.error = ''; target.stopped = false;
+    if (translate) {
+      target.started = true; target.preview = { pageNumber: number, sentences: [] };
+      setHovered(h => h?.page === number ? null : h);
+      setPinned(p => p?.page === number ? null : p);
+    }
+    target.phase = '저장된 번역 확인 중…';
+    const live = () => !run.cancelled && target.run === run && current.current === store;
     const job = async () => {
       let called = false;
       try {
-        if (!target.checked) { target.data = await getPageTranslation(store.paperId!, number); target.checked = true; }
-        if ((!force && target.data) || !translate || current.current !== store) return;
+        if (!target.checked) {
+          const saved = await getPageTranslation(store.paperId!, number);
+          if (!live()) return;
+          target.data = saved; target.checked = true;
+        }
+        if ((!force && target.data) || !translate || !live()) {
+          if (live()) target.preview = undefined;
+          return;
+        }
+        run.requestId = await beginPageTranslation();
+        if (!live()) return;
         target.phase = '원문 문장을 읽는 중…'; refresh();
         const sentences = await extractPageWithContinuations(store.pdf!, number, force);
-        if (current.current !== store) return;
+        if (!live()) return;
         target.phase = '한국어로 번역 중…'; refresh(); called = true;
         target.preview = { pageNumber: number, sentences: [] };
-        target.data = await translatePage({ paperId: store.paperId!, pageNumber: number, sentences, force }, rows => {
-          if (current.current !== store || !target.phase) return;
-          const translated = target.preview!.sentences;
+        const result = await translatePage({ paperId: store.paperId!, pageNumber: number, sentences, force }, rows => {
+          if (!live()) return;
+          const translated = new Map(target.preview!.sentences.map(sentence => [sentence.id, sentence]));
           for (const row of rows) {
-            if (row.id === translated.length && sentences[row.id] && row.translation.trim()) translated.push({ ...sentences[row.id], translation: row.translation, equations: row.equations });
+            if (sentences[row.id] && row.translation.trim()) translated.set(row.id, { ...sentences[row.id], translation: row.translation, equations: row.equations });
           }
-          target.phase = `한국어로 번역 중… ${translated.length}/${sentences.length} 문장`; refresh();
-        });
-        if (force && current.current === store) {
+          target.preview!.sentences = [...translated.values()].sort((a, b) => a.id - b.id);
+          target.phase = `한국어로 번역 중… ${translated.size}/${sentences.length} 항목`; refresh();
+        }, run.requestId);
+        if (!live()) return;
+        target.data = result;
+        target.preview = undefined;
+        if (force) {
           setHovered(null); setPinned(null);
           await Promise.all([...store.entries].filter(([n, e]) => n !== number && e.data && !e.job).map(async ([n, e]) => {
-            try { e.data = await getPageTranslation(store.paperId!, n) ?? e.data; } catch { /* Keep the last good page if a refresh fails. */ }
+            try { const saved = await getPageTranslation(store.paperId!, n); if (!e.job && live()) e.data = saved ?? e.data; } catch { /* Keep the last good page. */ }
           }));
         }
-      } catch (error) { target.error = errorMessage(error); }
-      finally { target.preview = undefined; target.phase = ''; target.job = undefined; refresh(); if (called) usage.current(); }
+      } catch (error) {
+        if (live()) {
+          target.error = errorMessage(error);
+          if (!target.preview?.sentences.length) target.preview = undefined;
+        }
+      }
+      finally {
+        if (run.requestId) void cancelPageTranslation(run.requestId).catch(() => {});
+        if (target.run === run) { target.phase = ''; target.job = undefined; target.run = undefined; refresh(); }
+        if (called) usage.current();
+      }
     };
     target.job = job(); refresh(); await target.job;
-  }, [store, refresh]);
+  }, [store, refresh, stop]);
 
   useEffect(() => { setOpen(false); setPageNumber(1); setPinned(null); setHovered(null); }, [store]);
   useEffect(() => { setPinned(null); setHovered(null); }, [open, active]);
@@ -88,7 +128,10 @@ export function usePageTranslation(pdf: PDFDocumentProxy | null, paperId: string
           const [x, y] = viewport.convertToPdfPoint((at.x - bounds.left) * viewport.width / bounds.width,
             (at.y - bounds.top) * viewport.height / bounds.height);
           const entry = store.entries.get(number);
-          const sentence = (entry?.data ?? entry?.preview)?.sentences.find(s => s.rects.some(r => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]));
+          const sentence = (entry?.preview ?? entry?.data)?.sentences
+            .flatMap(s => s.rects.filter(r => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])
+              .map(r => ({ sentence: s, distance: Math.abs(y - (r[1] + r[3]) / 2) / (r[3] - r[1]) })))
+            .sort((a, b) => a.distance - b.distance)[0]?.sentence;
           if (sentence) {
             sourceActive = true;
             setPageNumber(number);
@@ -157,6 +200,6 @@ export function usePageTranslation(pdf: PDFDocumentProxy | null, paperId: string
     [open, active, sentence, activePage]);
   const matches = (row: TranslatedSentence, number: number) => !!sentence &&
     (activePage === number && row.id === sentence.id || row.text === sentence.text && (row.layout?.sources?.length ?? 0) > 1 && row.layout!.sources!.some(s => s.pageNumber === activePage));
-  return { reader, entries: store.entries, load, activePage, matches, open, toggle, close: () => setOpen(false), pageNumber, goTo, entry: store.entries.get(pageNumber),
+  return { reader, entries: store.entries, load, stop, activePage, matches, open, toggle, close: () => setOpen(false), pageNumber, goTo, entry: store.entries.get(pageNumber),
     translate: () => void load(pageNumber, true), select, hover: (sentence: TranslatedSentence | null, number = pageNumber) => setHovered(sentence ? { page: number, sentence, origin: 'translation' } : null), hoverOrigin: hovered?.origin, activeId: sentence?.id, mark };
 }

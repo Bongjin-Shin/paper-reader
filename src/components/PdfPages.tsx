@@ -4,6 +4,9 @@ import type { Highlight, WordSelection, TranslationMark } from '../types';
 import { PageRenderCache } from '../lib/pageRendering';
 import { PdfPage } from './PdfPage';
 import type { PdfSearchMatch } from '../lib/pdfSearch';
+import type { usePageTranslation } from '../lib/usePageTranslation';
+import type { TranslationWidth } from './TranslationPane';
+import { TranslationPage } from './PageTranslationPanel';
 
 const empty: Highlight[] = [];
 interface Props {
@@ -13,6 +16,8 @@ interface Props {
   displayScale: RefObject<number>;
   highlights: Highlight[];
   translationMark: TranslationMark[] | null;
+  translation: ReturnType<typeof usePageTranslation>;
+  translationWidth: TranslationWidth;
   searchMatches: Map<number, PdfSearchMatch[]>;
   selectedSearchId: number;
   onSelect: (selection: WordSelection | null, extending?: boolean) => void;
@@ -20,7 +25,7 @@ interface Props {
   onHighlight: (highlight: Highlight, selection: WordSelection) => void;
 }
 
-export const PdfPages = memo(function PdfPages({ pdf, scale, renderRevision, displayScale, highlights, translationMark, searchMatches, selectedSearchId, onSelect, onRendered, onHighlight }: Props) {
+export const PdfPages = memo(function PdfPages({ pdf, scale, renderRevision, displayScale, highlights, translationMark, translation, translationWidth, searchMatches, selectedSearchId, onSelect, onRendered, onHighlight }: Props) {
   const cache = useMemo(() => new PageRenderCache(), [pdf]);
   useLayoutEffect(() => cache.prepareZoom(), [cache, scale]);
   const previous = useRef(new Map<number, Highlight[]>());
@@ -43,10 +48,12 @@ export const PdfPages = memo(function PdfPages({ pdf, scale, renderRevision, dis
     return grouped;
   }, [highlights]);
   return <div className="pages">
-    {Array.from({ length: pdf.numPages }, (_, index) => <PdfPage key={index}
+    {Array.from({ length: pdf.numPages }, (_, index) => <div className="page-pair" data-page-number={index + 1} key={index}><PdfPage
       pdf={pdf} pageNumber={index + 1} scale={scale} renderRevision={renderRevision} displayScale={displayScale} cache={cache}
       translationRects={translationByPage.get(index + 1)}
       searchMatches={searchMatches.get(index + 1)} selectedSearchId={selectedSearchId}
-      highlights={byPage.get(index + 1) ?? empty} onSelect={onSelect} onRendered={onRendered} onHighlight={onHighlight} />)}
+      highlights={byPage.get(index + 1) ?? empty} onSelect={onSelect} onRendered={onRendered} onHighlight={onHighlight} />
+      {translation.open && <TranslationPage number={index + 1} t={translation} pdf={pdf} sizing={translationWidth} />}
+    </div>)}
   </div>;
 });

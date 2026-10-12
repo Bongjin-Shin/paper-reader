@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { installBackend, open, select } from './helpers';
+import { installBackend, open, select, wordBox } from './helpers';
 const button=(page:Page,name:string)=>page.getByRole('button',{name,exact:true});
 const folder=(page:Page,name:string)=>page.getByRole('navigation',{name:'Library 폴더',exact:true}).getByRole('button',{name,exact:true});
 const undo=async(page:Page)=>{await page.keyboard.press('Control+z');};
@@ -31,7 +31,8 @@ test('Vocabulary deletion undo/redo restores highlights and cached results, pres
 
 test('highlight-only deletion can be undone and redone without changing Vocabulary or zoom',async({page})=>{
   await saved(page);const words=await page.evaluate(()=>localStorage.getItem('test-lookups'));
-  await select(page);await button(page,'하이라이트 취소').click();await expect(page.locator('.word-highlight')).toHaveCount(0);
+  const word=await wordBox(page);await page.mouse.click(word.x+word.width/2,word.y+word.height/2);
+  await button(page,'하이라이트 취소').click();await expect(page.locator('.word-highlight')).toHaveCount(0);
   await undo(page);await expect(page.locator('.word-highlight')).toHaveCount(1);await expect(message(page)).toContainText('하이라이트 삭제');
   await redo(page);await expect(page.locator('.word-highlight')).toHaveCount(0);
   expect(await page.evaluate(()=>localStorage.getItem('test-lookups'))).toBe(words);await expect(page.locator('.zoom-controls span')).toHaveText('125%');

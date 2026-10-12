@@ -46,7 +46,7 @@ test('chat failure retains the question for retry and closing during a request r
   await expect(page.getByLabel('논문 질문')).toHaveValue('');
 });
 
-test('cross-page sentence is complete in both pages while their scroll positions remain independent', async ({ page }) => {
+test('cross-page sentence is complete in both paired pages while translation interiors scroll independently', async ({ page }) => {
   const doc = await PDFDocument.create(), font = await doc.embedFont(StandardFonts.Helvetica);
   const a = doc.addPage([612, 792]), b = doc.addPage([612, 792]);
   a.drawText('A complete sentence.', { x: 40, y: 720, font, size: 12 });
@@ -57,9 +57,9 @@ test('cross-page sentence is complete in both pages while their scroll positions
   await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   await expect(page.locator('.translation-page').first().locator('.translated-sentence')).toHaveCount(2);
   await page.evaluate(() => { (window as any).__firstSentence = document.querySelector('.translated-sentence'); });
-  const before = await page.locator('.translation-content').evaluate(el => el.scrollTop);
+  const before = await page.locator('.translation-page-content').first().evaluate(el => el.scrollTop);
   await page.locator('.reader').evaluate(el => { el.scrollTop += 300; });
-  await expect.poll(() => page.locator('.translation-content').evaluate(el => el.scrollTop)).toBe(before);
+  await expect.poll(() => page.locator('.translation-page-content').first().evaluate(el => el.scrollTop)).toBe(before);
   expect(await page.evaluate(() => (window as any).__firstSentence.isConnected)).toBe(true);
   await page.getByRole('button', { name: '다음 번역 페이지' }).click();
   const readingPosition = await page.locator('.reader').evaluate(el => el.scrollTop);
@@ -76,17 +76,17 @@ test('cross-page sentence is complete in both pages while their scroll positions
   await expect(page.locator('.translated-sentence[aria-pressed="true"]')).toHaveCount(2);
   await page.screenshot({ path: 'test-results/continuous-translation.png' });
   const beforeReverse = await page.locator('.reader').evaluate(el => el.scrollTop);
-  const pane = (await page.locator('.translation-content').boundingBox())!;
+  const pane = (await page.locator('.translation-page-content').nth(1).boundingBox())!;
   await page.mouse.move(pane.x + pane.width / 2, pane.y + pane.height / 2);
   await page.mouse.wheel(0, -180);
-  await expect.poll(() => page.locator('.reader').evaluate(el => el.scrollTop)).toBe(beforeReverse);
+  await expect.poll(() => page.locator('.reader').evaluate(el => el.scrollTop)).toBeLessThan(beforeReverse);
 });
 
 test('translation resize leaves room for the PDF while chat is open', async ({ page }) => {
   await installBackend(page); await open(page);
   await page.getByRole('button', { name: '본문 번역', exact: true }).click();
   await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
-  const handle = page.getByRole('separator', { name: '번역창 너비 조절' }), box = (await handle.boundingBox())!;
+  const handle = page.getByRole('separator', { name: '1페이지 번역창 너비 조절' }), box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + 4, box.y + 100); await page.mouse.down(); await page.mouse.move(30, box.y + 100, { steps: 8 }); await page.mouse.up();
   await expect.poll(async () => (await page.locator('.reader').boundingBox())!.width).toBeGreaterThanOrEqual(260);
   await expect(page.getByRole('complementary', { name: '논문 채팅' })).toBeVisible();

@@ -519,3 +519,17 @@ fn paper_chat_can_interrupt_a_silent_turn_and_preserves_partial_answer_after_rej
         assert_eq!(reply.effort, "medium");
     }
 }
+
+#[test]
+fn cancellation_ends_a_subscription_translation_before_completion_and_allows_restart() {
+    use paper_vocabulary_lib::{cancellation::Cancellation, page_translation::{self, SourceSentence, PageTranslationRequest}};
+    let dir = tempfile::tempdir().unwrap(); let client = client(dir.path(), "page-stream-gated", true);
+    let request = PageTranslationRequest { force:false, paper_id:"paper".into(),page_number:1,sentences:vec![SourceSentence{id:0,text:"A sentence.".into(),rects:vec![[1.,1.,2.,2.]],layout:None}] };
+    let cancel = Cancellation::default(); let started = std::time::Instant::now();
+    let result = client.lookup_stream_cancellable(page_translation::request_body(&request), cancel.clone(), |_|cancel.cancel());
+    assert_eq!(result.unwrap_err(), paper_vocabulary_lib::cancellation::CANCELLED);
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
+    assert!(!dir.path().join("final-sent").exists());
+    fs::write(dir.path().join("scenario"), "ok").unwrap();
+    assert!(client.lookup(ai::request_body(&self::request())).is_ok());
+}

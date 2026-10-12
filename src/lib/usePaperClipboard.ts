@@ -23,12 +23,14 @@ export function usePaperClipboard(reader: RefObject<HTMLElement | null>, transla
       const selection=window.getSelection();
       if(!selection?.rangeCount || selection.isCollapsed)return;
       const range=selection.getRangeAt(0),root=reader.current;
-      if(root?.contains(range.startContainer) && root.contains(range.endContainer)) {
+      const element = (node: Node) => node instanceof Element ? node : node.parentElement;
+      const start=element(range.startContainer),end=element(range.endContainer);
+      if(root?.contains(range.startContainer) && root.contains(range.endContainer) && start?.closest('.textLayer') && end?.closest('.textLayer')) {
         writeMarkdownCopy(event,copyPdfSelection(root,range,n=>current.current.entries.get(n)?.data ?? undefined));
         return;
       }
-      const pane=document.querySelector('.translation-content');
-      if(pane?.contains(range.startContainer) && pane.contains(range.endContainer)) writeMarkdownCopy(event,selectedMarkdown(pane,range));
+      const pages=root?.querySelector('.pages');
+      if(pages && start?.closest('.translation-page-content') && end?.closest('.translation-page-content')) writeMarkdownCopy(event,selectedMarkdown(pages,range));
     };
     document.addEventListener('selectionchange',warm);
     document.addEventListener('copy',copy);

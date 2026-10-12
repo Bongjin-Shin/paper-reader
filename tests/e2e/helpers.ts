@@ -187,23 +187,29 @@ export async function installBackend(page: Page, options = { delay: 0, fail: fal
         if (command === 'logout_chatgpt') { localStorage.removeItem('test-chatgpt-connected'); (state as any).__loginPending = false; return; }
         if (command === 'get_page_translation') {
           if ((state as any).__pageCacheDelay) await new Promise(resolve => setTimeout(resolve, (state as any).__pageCacheDelay));
-          return rows('test-page-translations').find(r => r.layoutVersion === 7 && r.paperId === args.paperId && r.pageNumber === args.pageNumber) ?? null;
+          return rows('test-page-translations').find(r => r.layoutVersion === 9 && r.paperId === args.paperId && r.pageNumber === args.pageNumber) ?? null;
         }
+        if (command === 'begin_page_translation') {
+          const id = `page-${((state as any).__pageJobSequence = ((state as any).__pageJobSequence ?? 0) + 1)}`;
+          ((state as any).__pageJobs ??= new Set()).add(id); return id;
+        }
+        if (command === 'cancel_page_translation') { (state as any).__pageJobs?.delete(args.requestId); return; }
         if (command === 'translate_page') {
-          const req = args.request;
-          const saved = rows('test-page-translations').find(r => r.layoutVersion === 7 && r.paperId === req.paperId && r.pageNumber === req.pageNumber);
+          const req = args.request, textPrefix = (state as any).__pageTextPrefix ?? '';
+          const saved = rows('test-page-translations').find(r => r.layoutVersion === 9 && r.paperId === req.paperId && r.pageNumber === req.pageNumber);
           if (saved && !req.force) return saved;
           (state as any).__pageApiCalls = ((state as any).__pageApiCalls ?? 0) + 1;
           if ((state as any).__pageStreaming) {
             callbacks.get(args.onProgress.id)?.({ index: 0, message: [{ id: 0, translation: '먼저 도착한 번역 문장입니다.' }] });
           }
           if ((state as any).__pageDelay) await new Promise(resolve => setTimeout(resolve, (state as any).__pageDelay));
+          if (!(state as any).__pageJobs?.has(args.requestId)) throw new Error('번역을 중단했습니다.');
           if ((state as any).__pageFail) throw new Error('본문 번역 연결에 실패했습니다.');
           const equation = (text: string) => text.includes('E = mc')
             ? String.raw`\begin{aligned} E &= mc^2 \quad (1) \\ y &= \frac{1}{n} \quad (2) \end{aligned}`
             : text.includes('success') ? String.raw`\begin{aligned} \min f_{\mathrm{cost}} &= N-N_{\mathrm{success}} \quad (1) \\ N_{\mathrm{success}} &= \begin{cases} x=1, & t<T \\ x=0, & t>T \end{cases} \\ 0 &< x < \max \quad (2) \end{aligned}`
             : text.includes('x = 2') ? 'x = 2' : String.raw`\mathrm{x}`;
-          const result = { layoutVersion: 7, paperId: req.paperId, pageNumber: req.pageNumber, sentences: req.sentences.map((s: any) => ({ ...s, equations: (s.layout?.math ?? []).map((m: any) => ({ token: m.token, latex: equation(m.text) })), translation: s.layout?.kind === 'equation' ? s.text : ((state as any).__longPageTranslation ?? `한국어 번역 ${req.pageNumber}-${s.id + 1}: 문장에 대응하는 번역입니다.`) + (s.layout?.math ?? []).map((m: any) => ' ' + m.token).join('') })) };
+          const result = { layoutVersion: 9, paperId: req.paperId, pageNumber: req.pageNumber, sentences: req.sentences.map((s: any) => ({ ...s, equations: (s.layout?.math ?? []).map((m: any) => ({ token: m.token, latex: equation(m.text) })), translation: (s.layout?.kind === 'equation' || s.layout?.table?.original) ? s.text : ((state as any).__longPageTranslation ?? `${textPrefix}한국어 번역 ${req.pageNumber}-${s.id + 1}: 문장에 대응하는 번역입니다.`) + (s.layout?.math ?? []).map((m: any) => ' ' + m.token).join('') })) };
           localStorage.setItem('test-page-translations', JSON.stringify([...rows('test-page-translations').filter(r => r.paperId !== req.paperId || r.pageNumber !== req.pageNumber), result]));
           if (!['chatgpt', 'claude'].includes(localStorage.getItem('test-provider') ?? '')) localStorage.setItem('test-cost', String(summary().totalCostUsd + .002));
           return result;

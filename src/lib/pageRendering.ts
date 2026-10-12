@@ -89,7 +89,13 @@ export class PageRenderCache {
             this.viewportHeight = entry.rootBounds.height;
             // Document offsets stay stable during scrolling. Observer rectangles can
             // predate a scrollbar jump, so never combine them with a newer scrollTop.
-            page.bounds = { top: page.host.offsetTop, left: page.host.offsetLeft,
+            // A PDF now lives inside a positioned page pair. Include that row's
+            // offset so every page is measured in the reader's document space.
+            let top = 0, left = 0;
+            for (let host: HTMLElement | null = page.host; host && host !== this.reader; host = host.offsetParent as HTMLElement | null) {
+              top += host.offsetTop; left += host.offsetLeft;
+            }
+            page.bounds = { top, left,
               width: page.host.offsetWidth, height: page.host.offsetHeight };
           }
           page.visibleArea = entry.intersectionRect.width * entry.intersectionRect.height;

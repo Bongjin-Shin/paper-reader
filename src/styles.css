@@ -230,7 +230,7 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .library-sidebar .library-sidebar-create { border: 1px solid #cdd8c5; margin: 0 0 15px; color: #35604b; }
 .library-sidebar button, .library-paper-details { user-select: none; -webkit-user-select: none; }
 .library-sidebar button[data-drop-active="true"] { background: #d5e5cf; outline: 2px solid #52805e; outline-offset: -2px; }
-.library-columns, .library-paper-details { display: grid; grid-template-columns: minmax(210px, 2.7fr) minmax(160px, 1.3fr) minmax(95px, 1fr) 90px 100px 95px; gap: 18px; align-items: start; }
+.library-columns, .library-paper-details { display: grid; grid-template-columns: minmax(210px, 2.7fr) 100px minmax(160px, 1.3fr) minmax(95px, 1fr) 90px 95px; gap: 18px; align-items: start; }
 .library-list-scroll { overflow-x: auto; }
 .library-columns, .library-papers { min-width: 840px; }
 .library-columns { padding: 12px 0; color: #76806f; font-size: 11px; border-bottom: 1px solid #d8e0d2; }
@@ -274,29 +274,25 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .connection-panel .connection-status { color: #3b5743; font-weight: 600; }
 .connection-close { display: block; margin: 10px 0 0 auto; }
 
-/* Full-page translation is a sibling of the scrolling reader, not a second PDF render. */
+/* PDF and translation share one page row and one document scroll container. */
 .reader-layout { display: flex; flex: 1; min-height: 0; min-width: 0; }
 .reader-layout > .reader { min-width: 0; }
 .body-translation-toggle, .translate-page-button { border: 1px solid #c9d4c5; border-radius: 5px; padding: 8px 11px; background: #fafbf7; font-size: 12px; white-space: nowrap; }
 .body-translation-toggle[aria-pressed="true"] { background: #e5ede0; color: #355647; }
-.translation-container, .translation-inactive { flex: 0 0 clamp(280px, 31vw, 440px); min-height: 0; min-width: 0; }
-.translation-inactive { visibility: hidden; pointer-events: none; }
-.page-translation-panel { height: 100%; display: flex; flex-direction: column; border-left: 1px solid #d8ded5; background: #fcfcfa; }
 .translation-pagination button { border: 0; background: transparent; width: 28px; height: 28px; padding: 0; font-size: 19px; }
-.translation-pagination { display: grid; grid-template-columns: 28px 1fr 28px 28px; align-items: center; gap: 4px; padding: 4px 10px; border-bottom: 1px solid #e3e6de; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
+.reader-navigation { flex-shrink: 0; display: flex; justify-content: flex-end; padding: 0 24px; background: #fcfcfa; border-bottom: 1px solid #e3e6de; }
+.translation-pagination { width: 210px; display: grid; grid-template-columns: 28px 1fr 28px 28px; align-items: center; gap: 4px; padding: 2px 0; font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
 .translation-close { margin-left: 3px; }
-.reader, .translation-content { overscroll-behavior: contain; }
-.translation-content { flex: 1; min-height: 0; overflow: auto; padding: 16px 24px 30px; background: #e9ebe6; }
-.translation-content > p { font-size: 12px; color: #737c70; line-height: 1.7; }
-.translation-content > [role="alert"] { color: #994e38; }
-.translation-content .translation-help { font-size: 11px; margin: 0 0 20px; }
+.reader { overscroll-behavior: contain; }
 .translation-paragraph { font-size: 15px; line-height: 1.95; margin: 0 0 1em; text-align: justify; text-align-last: start; overflow-wrap: anywhere; word-break: normal; }
 .translation-heading { font-weight: 650; text-align: left; margin-top: 1.25em; line-height: 1.55; }
 .translation-equation { max-width: 100%; }
 .translation-paragraph.translation-equation { text-align: center; text-align-last: center; margin: 1em 0; }
-.translation-paragraph.translation-equation .translated-sentence { display: inline-block; max-width: 100%; }
+.translation-paragraph.translation-equation .translated-sentence { display: block; max-width: 100%; }
 .translated-sentence { display: inline; border: 0; border-radius: 2px; padding: 2px 0; background: transparent; cursor: pointer; user-select: text; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .translated-sentence[aria-pressed="true"] { background: #dedfdd; }
+.translated-sentence:has(> ol, > ul, > blockquote, > pre, > table, > h1, > h2, > h3, > h4, > h5, > h6) { display: block; }
+.translated-sentence > :is(ol, ul, blockquote, pre, table) { margin-top: .5em; margin-bottom: .5em; }
 .translated-sentence:focus-visible { outline: 1px solid #719180; }
 .translation-paragraph .katex { font-size: 1.08em; text-align: initial; white-space: nowrap; }
 .translation-math { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; padding: 2px 1px; }
@@ -309,6 +305,7 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .translation-table .translation-math { max-width: none; overflow: visible; }
 .translation-table .katex { font-size: 1.05em; white-space: nowrap; }
 .translation-paragraph .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 2px; margin: .35em 0; }
+.translation-math.display .katex-display { width: max-content; min-width: 100%; overflow: visible; box-sizing: border-box; }
 .translation-markdown-paragraph + .translation-markdown-paragraph { display: block; margin-top: .6em; }
 .translation-paragraph pre { white-space: pre-wrap; text-align: left; }
 .translation-caption { background: #f3f5f1; border-left: 3px solid #a8b6a1; padding: 12px 14px; text-align: left; margin-top: 1.5em; }
@@ -322,14 +319,17 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 @media (max-width: 1350px) { .toolbar { gap: 12px; padding: 0 16px; } .toolbar-actions { gap: 10px; } .brand { gap: 8px; } }
 
 .pdf-page, .translation-extraction { --scale-round-x: 1px; --scale-round-y: 1px; }
-.translation-container, .translation-inactive { position: relative; }
 .translation-resizer { position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; z-index: 5; cursor: col-resize; touch-action: none; user-select: none; }
-.translation-resizer:hover, .translation-resizer:focus-visible, [data-resizing] > .translation-resizer { background: #71918055; outline: none; }
-[data-resizing] > .page-translation-panel { user-select: none; pointer-events: none; }
+.translation-resizer:hover, .translation-resizer:focus-visible, [data-translation-resizing] .translation-resizer { background: #71918055; outline: none; }
 
-.translation-content { overflow-anchor: none; scroll-behavior: auto; padding-bottom: 20vh; }
-.translation-page { box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; width: 100%; min-height: 70vh; max-height: 100%; aspect-ratio: var(--page-aspect, .77); padding: 20px 20px 36px; border: 1px solid #dfe4db; margin-bottom: 24px; background: #fff; box-shadow: 0 2px 5px #26352212; }
-.translation-page-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; min-height: 26px; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid #eceee9; }
+.page-pair { position: relative; width: max-content; box-shadow: 0 2px 7px #23352818; }
+.page-pair > .pdf-page { box-shadow: none; }
+.reader-with-translation .page-pair { padding-right: var(--translation-width); }
+.translation-page { position: absolute; right: 0; top: 0; bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; width: var(--translation-width); min-height: 0; padding: 14px 18px 18px; border-left: 1px solid #e1e5dc; background: #fff; }
+.translation-page .translation-help { font-size: 11px; color: #737c70; line-height: 1.7; margin: 0 0 20px; }
+[data-translation-resizing] .text-host, [data-translation-resizing] .translation-page-content { pointer-events: none; user-select: none; }
+
+.translation-page-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; min-height: 26px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eceee9; }
 .translation-page-header h3 { font-size: 11px; font-weight: 500; color: #7a8274; margin: 0; }
 .translation-page-content { flex: 1; min-height: 0; min-width: 0; padding-right: 20px; overflow: auto; overscroll-behavior: auto; scrollbar-gutter: stable; }
 .translation-page-content:focus-visible { outline: 1px solid #719180; outline-offset: -1px; }
@@ -367,6 +367,12 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .chat-error button { margin-top: 8px; display: block; }
 .paper-chat form { border-top: 1px solid #e3e6de; padding: 12px; }
 .paper-chat textarea { display: block; resize: vertical; min-height: 70px; max-height: 180px; width: 100%; border: 1px solid #d9dfd3; border-radius: 8px; padding: 10px; background: white; font: inherit; font-size: 13px; }
+.chat-selection { margin-bottom: 10px; padding: 8px 10px; border: 1px solid #d9dfd3; border-left: 3px solid #8ba380; border-radius: 6px; background: #f0f4eb; }
+.chat-selection header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.paper-chat .chat-selection button { padding: 0; background: transparent; color: #526e43; border-radius: 2px; }
+.paper-chat .chat-selection-source { font-size: 11px; text-align: left; }
+.paper-chat .chat-selection-remove { flex-shrink: 0; width: 22px; height: 22px; font-size: 18px; }
+.chat-selection blockquote { margin: 5px 0 0; max-height: 84px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.65; color: #4d5c47; }
 .paper-chat form > div { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 8px; }
 .paper-chat form small { font-size: 9px; color: #839077; }
 .paper-chat form button { border: 0; border-radius: 7px; padding: 8px 12px; color: white; background: #526e43; font-size: 12px; }
@@ -429,3 +435,6 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .chat-settings { flex-shrink: 0; max-height: 48%; overflow-y: auto; }
 .chat-settings .claude-connection p { font-size: 11px; line-height: 1.6; margin: 6px 0; }
 .chat-settings .claude-connection .connection-status { font-size: 12px; }
+
+.translation-page-actions { display: flex; align-items: center; gap: 8px; }
+.stop-page-button { font-size: 11px; padding: 4px 7px; }

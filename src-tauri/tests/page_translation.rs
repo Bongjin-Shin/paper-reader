@@ -179,7 +179,7 @@ fn request_validation_rejects_bad_ids_empty_oversize_and_invalid_coordinates() {
     req.sentences[0].rects[0][0] = f64::NAN;
     assert!(req.validate().is_err());
     req = request();
-    req.sentences[0].text = "a".repeat(20001);
+    req.sentences[0].text = "a".repeat(1_000_001);
     assert!(req.validate().is_err());
     req.sentences.clear();
     assert!(req.validate().is_err());
@@ -197,6 +197,115 @@ fn prompt_sends_only_numbered_source_and_parser_keeps_local_coordinates() {
     )
     .unwrap();
     assert_eq!(parsed.sentences[0].source, req.sentences[0]);
+}
+
+#[tokio::test]
+async fn long_pages_are_batched_without_losing_sentences_and_restart_reuses_the_whole_page() {
+    use paper_vocabulary_lib::page_translation::translate_page_batched;
+    for provider in [AiProvider::Api, AiProvider::Chatgpt, AiProvider::Claude] {
+        let dir = tempfile::tempdir().unwrap(); let path = dir.path().join("db.sqlite");
+        let db = Database::open(&path).unwrap(); register(&db); let db = Mutex::new(db);
+        let mut req = request();
+        req.sentences = (0..300).map(|id| SourceSentence { id,
+            text: format!("Sentence {id} has source text that must remain in the complete page translation."),
+            rects: vec![[10., 20., 190., 32.]], layout: None }).collect();
+        req.validate().unwrap();
+        let mut calls = 0; let mut completed = vec![];
+        let result = translate_page_batched(&db, &req, |batch, ids| {
+            calls += 1;
+            assert!(batch.sentences.len() <= 64);
+            assert!(batch.sentences.iter().map(|s| s.text.chars().count()).sum::<usize>() <= 6000);
+            let mut answer = response(provider);
+            answer.response_id = Some(format!("chunk-{calls}"));
+            answer.text = json!({"sentences": batch.sentences.iter().enumerate().map(|(index,s)| {
+                assert_eq!(s.id as usize, index);
+                json!({"id":s.id,"translation":format!("번역 {}", ids[index].unwrap()),"equations":[]})
+            }).collect::<Vec<_>>()}).to_string();
+            async { Ok(answer) }
+        }, |rows| completed.extend(rows.into_iter().map(|s| s.id))).await.unwrap();
+        assert!(calls > 1);
+        assert_eq!(completed, (0..300).collect::<Vec<_>>());
+        for (i, row) in result.sentences.iter().enumerate() {
+            assert_eq!(row.source, req.sentences[i]); assert_eq!(row.translation, format!("번역 {i}"));
+        }
+        let cost = db.lock().unwrap().usage_summary().unwrap().total_cost_usd;
+        if provider == AiProvider::Api { assert!(cost > 0.); } else { assert_eq!(cost, 0.); }
+        drop(db); let db = Mutex::new(Database::open(&path).unwrap());
+        let saved = translate_page_batched(&db, &req, |_,_| async { panic!("cached page must not call AI") }, |_| {}).await.unwrap();
+        assert_eq!(saved.sentences.len(), 300);
+        assert_eq!(db.lock().unwrap().usage_summary().unwrap().total_cost_usd, cost);
+    }
+}
+
+#[tokio::test]
+async fn batch_failure_never_saves_a_partial_page_and_retry_can_finish_it() {
+    use paper_vocabulary_lib::page_translation::translate_page_batched;
+    let db = Database::open(Path::new(":memory:")).unwrap(); register(&db); let db = Mutex::new(db);
+    let mut req = request();
+    req.sentences = (0..130).map(|id| SourceSentence { id, text: format!("Sentence {id}."), rects: vec![[1.,2.,3.,4.]], layout: None }).collect();
+    for fail in [true, false] {
+        let mut calls = 0;
+        let result = translate_page_batched(&db, &req, |batch,_| {
+            calls += 1;
+            let mut answer = response(AiProvider::Api); answer.response_id = Some(format!("try-{fail}-{calls}"));
+            answer.text = json!({"sentences": batch.sentences.iter().map(|s|json!({"id":s.id,"translation":"문장 번역","equations":[]})).collect::<Vec<_>>()}).to_string();
+            async move { if fail && calls == 2 { Err("연결 오류".into()) } else { Ok(answer) } }
+        }, |_| {}).await;
+        if fail {
+            assert!(result.unwrap_err().contains("2/3 구간"));
+            assert!(db.lock().unwrap().page_translation("paper",1).unwrap().is_none());
+            assert_eq!(db.lock().unwrap().usage_summary().unwrap().total_cost_usd,0.);
+        } else { assert_eq!(result.unwrap().sentences.len(),130); }
+    }
+}
+
+#[tokio::test]
+async fn original_tables_are_local_only_and_oversized_sentences_rejoin_with_their_equations() {
+    use paper_vocabulary_lib::page_translation::{translate_page_batched, EquationSource, SentenceLayout, LayoutKind, TableCellLayout};
+    let db = Database::open(Path::new(":memory:")).unwrap(); register(&db); let db = Mutex::new(db);
+    let mut req = request();
+    req.sentences[0].text = format!("{} [[PV_MATH_1]] {}", "Long sentence words ".repeat(650), "tail words ".repeat(650));
+    req.sentences[0].layout = Some(SentenceLayout { paragraph:0, kind:LayoutKind::Paragraph, sources:vec![], typography:None, table:None,
+        math:vec![EquationSource { token:"[[PV_MATH_1]]".into(), text:"x + y".into(), rect:[1.,2.,3.,4.], font_size:10.,page_number:Some(1),fraction_bars: vec![], glyphs:vec![] }] });
+    req.sentences[1].text = "Table 1".into();
+    req.sentences[1].layout = Some(SentenceLayout { paragraph:1, kind:LayoutKind::Table, sources:vec![], typography:None, math:vec![],
+        table:Some(TableCellLayout { id:0,row:0,column:0,columns:1,header:false,original:Some([10.,20.,200.,100.]) }) });
+    let mut calls = 0; let mut completed = vec![];
+    let output = translate_page_batched(&db,&req,|batch,ids| {
+        calls += 1;
+        assert!(ids.iter().all(Option::is_none));
+        assert!(batch.sentences.iter().all(|s|s.layout.as_ref().unwrap().table.is_none()));
+        let mut answer = response(AiProvider::Chatgpt);
+        answer.text = json!({"sentences":batch.sentences.iter().map(|s|json!({"id":s.id,"translation":s.text,
+            "equations":s.layout.as_ref().unwrap().math.iter().map(|m|json!({"token":m.token,"latex":"x+y"})).collect::<Vec<_>>()})).collect::<Vec<_>>()}).to_string();
+        async { Ok(answer) }
+    },|rows| completed.extend(rows.into_iter().map(|s|s.id))).await.unwrap();
+    assert!(calls > 1); assert_eq!(completed,vec![1,0]);
+    assert_eq!(output.sentences[0].source,req.sentences[0]);
+    assert_eq!(output.sentences[0].translation.split_whitespace().collect::<Vec<_>>(),req.sentences[0].text.split_whitespace().collect::<Vec<_>>());
+    assert_eq!(output.sentences[0].equations.len(),1);
+    assert_eq!(output.sentences[1].source,req.sentences[1]);
+}
+
+#[tokio::test]
+async fn original_table_does_not_overwrite_its_identically_named_caption_on_retranslation() {
+    use paper_vocabulary_lib::page_translation::{translate_page_batched, SentenceLayout, LayoutKind, TableCellLayout};
+    let db = Database::open(Path::new(":memory:")).unwrap(); register(&db); let db = Mutex::new(db);
+    let mut req = request(); req.force = true;
+    req.sentences[0].text = "Table 1".into(); req.sentences[1].text = "Table 1".into();
+    req.sentences[1].layout = Some(SentenceLayout { paragraph:0, kind:LayoutKind::Table, sources:vec![], typography:None, math:vec![],
+        table:Some(TableCellLayout { id:0,row:0,column:0,columns:1,header:false,original:Some([10.,20.,200.,100.]) }) });
+    let input:serde_json::Value=serde_json::from_str(request_body(&req)["input"].as_str().unwrap()).unwrap();
+    assert_eq!(input["sentences"].as_array().unwrap().len(),1);
+    translate_page_batched(&db,&req,|batch,_| {
+        assert_eq!(batch.sentences.len(),1);
+        let mut answer=response(AiProvider::Claude);
+        answer.text=json!({"sentences":[{"id":0,"translation":"표 1","equations":[]}]}).to_string();
+        async { Ok(answer) }
+    }, |_| {}).await.unwrap();
+    let saved=db.lock().unwrap().page_translation("paper",1).unwrap().unwrap();
+    assert_eq!(saved.sentences[0].translation,"표 1");
+    assert_eq!(saved.sentences[1].translation,"Table 1");
 }
 #[test]
 fn migration_from_version_nine_preserves_existing_papers_and_preferences() {
@@ -299,7 +408,7 @@ async fn legacy_layout_cache_is_kept_but_not_reused_until_an_explicit_translatio
         sql.query_row::<i64, _, _>("SELECT layout_version FROM page_translations", [], |r| r
             .get(0))
             .unwrap(),
-        7
+        9
     );
 }
 
@@ -319,7 +428,7 @@ async fn layout_and_original_equations_persist_locally_without_sending_coordinat
         paragraph: 0,
         kind: LayoutKind::Paragraph,
         math: vec![EquationSource {
-            glyphs: vec![],
+            fraction_bars: vec![], glyphs: vec![],
             page_number: None,
             token: "[[PV_MATH_0]]".into(),
             text: "E = mc2".into(),
@@ -360,7 +469,7 @@ async fn lost_or_duplicated_formula_markers_never_save_or_charge_and_invalid_geo
         paragraph: 0,
         kind: LayoutKind::Equation,
         math: vec![EquationSource {
-            glyphs: vec![],
+            fraction_bars: vec![], glyphs: vec![],
             page_number: None,
             token: "[[PV_MATH_0]]".into(),
             text: "y = 1/n".into(),
@@ -391,7 +500,7 @@ async fn lost_or_duplicated_formula_markers_never_save_or_charge_and_invalid_geo
     assert!(req.validate().is_err());
 }
 #[tokio::test]
-async fn old_line_based_cache_is_not_reused_for_sentence_layout() {
+async fn old_table_layout_cache_is_not_reused_for_original_table_layout() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("data.db");
     let db = Database::open(&path).unwrap();
@@ -403,7 +512,7 @@ async fn old_line_based_cache_is_not_reused_for_sentence_layout() {
     .await
     .unwrap();
     let sql = rusqlite::Connection::open(&path).unwrap();
-    sql.execute("UPDATE page_translations SET layout_version=6", [])
+    sql.execute("UPDATE page_translations SET layout_version=8", [])
         .unwrap();
     assert!(db
         .lock()
@@ -489,11 +598,13 @@ fn latex_is_required_per_formula_and_streamed_as_a_complete_sentence() {
     req.sentences[0].text = "Energy is [[PV_MATH_1000]].".into();
     req.sentences[0].layout = Some(SentenceLayout { table: None, paragraph: 0, kind: LayoutKind::Paragraph, sources: vec![], typography: None,
         math: vec![EquationSource { token: "[[PV_MATH_1000]]".into(), text: "E = mc 2".into(), rect: [10., 20., 90., 40.],
-            font_size: 12., page_number: Some(1), glyphs: vec![EquationGlyph { text: "2".into(), x: 33., y: 6., size: 7. }] }] });
+            font_size: 12., page_number: Some(1), fraction_bars: vec![[20., 40., 12.]], glyphs: vec![EquationGlyph { text: "2".into(), x: 33., y: 6., size: 7., width: Some(4.) }] }] });
     req.validate().unwrap();
     let input: serde_json::Value = serde_json::from_str(request_body(&req)["input"].as_str().unwrap()).unwrap();
     assert_eq!(input["sentences"][0]["kind"], "paragraph");
     assert_eq!(input["sentences"][0]["equations"][0]["glyphs"][0]["y"], 6.);
+    assert_eq!(input["sentences"][0]["equations"][0]["glyphs"][0]["width"], 4.);
+    assert_eq!(input["sentences"][0]["equations"][0]["fractionBars"][0], json!([20., 40., 12.]));
     assert!(input["sentences"][0]["equations"][0].get("rect").is_none());
     let equations = json!([{"token":"[[PV_MATH_1000]]","latex":"E=mc^2"}]);
     let text = json!({"sentences":[{"id":0,"translation":"에너지는 [[PV_MATH_1000]]입니다.","equations":equations}, {"id":1,"translation":"다음 문장입니다.","equations":[]}]}).to_string();
@@ -510,6 +621,12 @@ fn latex_is_required_per_formula_and_streamed_as_a_complete_sentence() {
     let mut value: serde_json::Value = serde_json::from_str(&text).unwrap();
     value["sentences"][1]["translation"] = json!("Invented [[PV_MATH_9999]]");
     assert!(parse_result(&req, &value.to_string()).is_err());
+    req.sentences[0].layout.as_mut().unwrap().math[0].fraction_bars[0] = [40., 20., 12.];
+    assert!(req.validate().is_err());
+    req.sentences[0].layout.as_mut().unwrap().math[0].fraction_bars.clear();
+    req.sentences[0].layout.as_mut().unwrap().math[0].glyphs[0].width = Some(f64::INFINITY);
+    assert!(req.validate().is_err());
+    req.sentences[0].layout.as_mut().unwrap().math[0].glyphs[0].width = None;
     req.sentences[0].layout.as_mut().unwrap().math[0].glyphs[0].y = f64::NAN;
     assert!(req.validate().is_err());
 }
@@ -527,7 +644,7 @@ async fn table_cells_keep_their_grid_in_prompt_and_cache_and_reject_invalid_colu
         math: vec![],
         sources: vec![],
         typography: None,
-        table: Some(TableCellLayout { id: 0, row: 1, column: 0, columns: 3, header: false }),
+        table: Some(TableCellLayout { id: 0, row: 1, column: 0, columns: 3, header: false, original: None }),
     });
     req.validate().unwrap();
     let body = request_body(&req);
@@ -541,4 +658,17 @@ async fn table_cells_keep_their_grid_in_prompt_and_cache_and_reject_invalid_colu
     assert!(req.validate().is_err());
     req.sentences[0].layout.as_mut().unwrap().table = None;
     assert!(req.validate().is_err());
+}
+
+#[tokio::test]
+async fn cancelled_translation_never_saves_or_overwrites_the_previous_page() {
+    use paper_vocabulary_lib::{cancellation::Cancellation,page_translation::translate_page_cancellable};
+    let dir=tempfile::tempdir().unwrap();let db=Database::open(&dir.path().join("db")).unwrap();register(&db);let db=Mutex::new(db);
+    let cancellation=Cancellation::default();
+    let result=translate_page_cancellable(&db,&request(),|_,_|{cancellation.cancel();async{Ok(response(AiProvider::Api))}},|_|{},&cancellation).await;
+    assert!(result.is_err());assert!(db.lock().unwrap().page_translation("paper",1).unwrap().is_none());
+    let saved=translate_page(&db,&request(),||async{Ok(response(AiProvider::Api))}).await.unwrap();
+    let mut force=request();force.force=true;let cancellation=Cancellation::default();
+    assert!(translate_page_cancellable(&db,&force,|_,_|{cancellation.cancel();async{Ok(response(AiProvider::Api))}},|_|{},&cancellation).await.is_err());
+    assert_eq!(serde_json::to_value(db.lock().unwrap().page_translation("paper",1).unwrap().unwrap()).unwrap(),serde_json::to_value(saved).unwrap());
 }

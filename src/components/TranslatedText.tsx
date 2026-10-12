@@ -29,7 +29,7 @@ const SentenceContent = memo(function SentenceContent({ sentence }: { sentence: 
 function Sentence({sentence,t,pageNumber}: {sentence:TranslatedSentence;pageNumber:number;t:ReturnType<typeof usePageTranslation>}) {
   return <div role="button" tabIndex={0} className="translated-sentence" data-sentence-id={sentence.id}
     aria-pressed={t.matches(sentence,pageNumber)} style={sentence.layout?.typography ? {
-      fontSize: `${sentence.layout.typography.fontScale}em`, fontWeight: sentence.layout.typography.bold ? 700 : 400,
+      fontSize: `${sentence.layout.kind === 'equation' ? 1 : sentence.layout.typography.fontScale}em`, fontWeight: sentence.layout.typography.bold ? 700 : 400,
       fontStyle: sentence.layout.typography.italic ? 'italic' : 'normal',
     } : undefined} onMouseEnter={()=>t.hover(sentence,pageNumber)} onFocus={()=>t.hover(sentence,pageNumber)} onBlur={()=>t.hover(null)}
     onClick={()=>{if (window.getSelection()?.isCollapsed !== false) t.select(sentence,pageNumber);}}
@@ -40,19 +40,15 @@ function Sentence({sentence,t,pageNumber}: {sentence:TranslatedSentence;pageNumb
 export function TranslatedText({sentences,t,pageNumber}: {pageNumber:number;sentences:TranslatedSentence[];t:ReturnType<typeof usePageTranslation>}) {
   const paragraphs: {id:number;kind:string;sentences:TranslatedSentence[]}[]=[];
   for(const sentence of sentences) {
-    const id=sentence.layout?.table?.id ?? sentence.layout?.paragraph ?? sentence.id, kind=sentence.layout?.kind ?? 'paragraph';
+    // Ignore legacy cell/crop rows as well: tables have captions only.
+    if (sentence.layout?.table || sentence.layout?.kind === 'table') continue;
+    const id = sentence.layout?.paragraph ?? sentence.id, kind = sentence.layout?.kind ?? 'paragraph';
     if(paragraphs.at(-1)?.id!==id || paragraphs.at(-1)?.kind!==kind) paragraphs.push({id,kind,sentences:[]});
     paragraphs.at(-1)!.sentences.push(sentence);
   }
   const labels: Record<string, string> = { caption: '그림·표 설명', footnote: '각주', header: '머리말', footer: '꼬리말' };
   return <div className="translated-sentences" onMouseLeave={()=>t.hover(null)}>
-    {paragraphs.map(({id,kind,sentences})=>kind === 'table' ? <div key={`${id}-${kind}`} className="translation-table-scroll" role="region" aria-label="표 번역" tabIndex={0}>
-      <table className="translation-table"><tbody>{Array.from(new Set(sentences.map(s=>s.layout!.table!.row))).map(row=><tr key={row}>
-        {Array.from({length:sentences[0].layout!.table!.columns},(_,column)=>{
-          const rows=sentences.filter(s=>s.layout!.table!.row===row && s.layout!.table!.column===column), Cell=rows[0]?.layout?.table?.header ? 'th' : 'td';
-          return <Cell key={column} scope={Cell==='th'?'col':undefined}>{rows.map(sentence=><Sentence key={sentence.id} sentence={sentence} pageNumber={pageNumber} t={t}/>)}</Cell>;
-        })}</tr>)}</tbody></table>
-    </div> : <div key={`${id}-${kind}`} className={`translation-paragraph translation-${kind}`} aria-label={labels[kind]}>
+    {paragraphs.map(({id,kind,sentences})=><div key={`${id}-${kind}`} className={`translation-paragraph translation-${kind}`} aria-label={labels[kind]}>
       {labels[kind] && <span className="translation-region-label" aria-hidden="true">{labels[kind]}</span>}
       {sentences.map((sentence,index)=><Fragment key={sentence.id}>{index>0?' ':null}<Sentence sentence={sentence} pageNumber={pageNumber} t={t}/></Fragment>)}
     </div>)}

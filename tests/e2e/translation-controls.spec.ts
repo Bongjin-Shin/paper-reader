@@ -1,0 +1,54 @@
+import {test,expect} from '@playwright/test';
+import {installBackend,open,startPageTranslation} from './helpers';
+
+test('stop an unfinished page, retain its preview, then retranslate without stale results',async({page})=>{
+ await installBackend(page);await open(page);
+ await page.evaluate(()=>{(window as any).__pageStreaming=true;(window as any).__pageDelay=1500;});
+ await page.getByRole('button',{name:'본문 번역',exact:true}).click();await startPageTranslation(page);
+ const card=page.locator('.translation-page').first();
+ await expect(card).toContainText('먼저 도착한 번역');
+ await expect(card.getByRole('button',{name:'1페이지 재번역',exact:true})).toBeEnabled();
+ await card.getByRole('button',{name:'1페이지 번역 중단'}).click();
+ await expect(card).toContainText('번역을 중단했습니다.');
+ await expect(card).toContainText('먼저 도착한 번역');
+ await expect(card.getByRole('button',{name:'1페이지 번역 중단'})).toHaveCount(0);
+ await page.evaluate(()=>{(window as any).__pageStreaming=false;(window as any).__pageDelay=20;(window as any).__pageTextPrefix='새 번역 ';});
+ await card.getByRole('button',{name:'1페이지 재번역',exact:true}).click();
+ await expect(card).toContainText('새 번역 한국어 번역 1-4');
+ await expect.poll(()=>page.evaluate(()=>(window as any).__pageApiCalls)).toBe(2);
+ await page.waitForTimeout(1600);
+ await expect(card).toContainText('새 번역 한국어 번역 1-4');
+ await expect(card.getByRole('alert')).toHaveCount(0);
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('test-page-translations')!)[0].sentences[0].translation)).toContain('새 번역');
+});
+test('retranslate during generation cancels the old job and starts a fresh request',async({page})=>{
+ await installBackend(page);await open(page);
+ await page.evaluate(()=>{(window as any).__pageDelay=1200;(window as any).__pageStreaming=true;});
+ await page.getByRole('button',{name:'본문 번역',exact:true}).click();await startPageTranslation(page);
+ const card=page.locator('.translation-page').first();await expect(card).toContainText('먼저 도착한 번역');
+ await page.evaluate(()=>{(window as any).__pageDelay=30;(window as any).__pageStreaming=false;(window as any).__pageTextPrefix='재시작 ';});
+ await card.getByRole('button',{name:'1페이지 재번역',exact:true}).click();
+ await expect(card).toContainText('재시작 한국어 번역 1-4');
+ const calls=await page.evaluate(()=>(window as any).__calls);
+ expect(calls.filter((c:any)=>c.command==='translate_page').map((c:any)=>c.args.request.force)).toEqual([false,true]);
+ expect(calls.some((c:any)=>c.command==='cancel_page_translation'&&c.args.requestId==='page-1')).toBe(true);
+ await page.waitForTimeout(1300);await expect(card).toContainText('재시작 한국어 번역 1-4');
+ await expect(card.getByRole('alert')).toHaveCount(0);
+});
+test('retranslation shows a fresh preview from the top and stop preserves the complete disk cache',async({page})=>{
+ await installBackend(page);await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();await startPageTranslation(page);
+ const card=page.locator('.translation-page').first();await expect(card).toContainText('한국어 번역 1-4');
+ const saved=await page.evaluate(()=>localStorage.getItem('test-page-translations'));
+ await card.locator('.translation-page-content').evaluate(el=>el.scrollTop=el.scrollHeight);
+ await page.evaluate(()=>{(window as any).__pageDelay=1000;(window as any).__pageStreaming=true;});
+ await card.getByRole('button',{name:'1페이지 재번역',exact:true}).click();
+ await expect(card.getByRole('button',{name:'1페이지 번역 중단'})).toBeVisible();
+ await expect(card).toContainText('먼저 도착한 번역');
+ await expect(card).not.toContainText('한국어 번역 1-4');
+ expect(await card.locator('.translation-page-content').evaluate(el=>el.scrollTop)).toBe(0);
+ await card.getByRole('button',{name:'1페이지 번역 중단'}).click();
+ await expect(card).toContainText('먼저 도착한 번역');
+ await page.waitForTimeout(1100);expect(await page.evaluate(()=>localStorage.getItem('test-page-translations'))).toBe(saved);
+ await page.reload();await open(page);await page.getByRole('button',{name:'본문 번역',exact:true}).click();
+ await expect(card).toContainText('한국어 번역 1-4');
+});

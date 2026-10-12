@@ -139,6 +139,22 @@ fn highlight_only_undo_preserves_word_and_restores_exact_color_and_position() {
     );
 }
 #[test]
+fn importance_clearing_can_be_undone_redone_and_reopened() {
+    let (dir, mut db, id) = fixture();
+    db.set_paper_importance(&id, 3).unwrap();
+    db.record("중요도 해제", LIBRARY, |db| db.set_paper_importance(&id, 0))
+        .unwrap();
+    assert_eq!(db.library().unwrap().papers[0].importance, 0);
+    db.restore_history(false, &dir.path().join("papers")).unwrap();
+    assert_eq!(db.library().unwrap().papers[0].importance, 3);
+    db.restore_history(true, &dir.path().join("papers")).unwrap();
+    assert_eq!(db.library().unwrap().papers[0].importance, 0);
+    drop(db);
+    let db = Database::open(&dir.path().join("data.db")).unwrap();
+    assert_eq!(db.library().unwrap().papers[0].importance, 0);
+}
+
+#[test]
 fn library_batch_moves_metadata_memo_importance_and_folders_undo_in_order() {
     let (dir, mut db, id) = fixture();
     let root = dir.path();

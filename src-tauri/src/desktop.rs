@@ -23,6 +23,7 @@ struct AppState {
     codex: codex::CodexClient,
     claude: claude::ClaudeClient,
     dropped_paths: Mutex<Option<Vec<PathBuf>>>,
+    translation_jobs: crate::cancellation::TranslationJobs,
 }
 
 #[tauri::command]
@@ -409,53 +410,55 @@ fn get_page_translation(
 }
 
 #[tauri::command]
+fn begin_page_translation(state: State<'_, AppState>) -> Result<String, String> { state.translation_jobs.begin() }
+#[tauri::command]
+fn cancel_page_translation(state: State<'_, AppState>, request_id: String) -> Result<(), String> { state.translation_jobs.cancel(&request_id) }
+
+#[tauri::command]
 async fn translate_page(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     request: crate::page_translation::PageTranslationRequest,
+    request_id: String,
     on_progress: tauri::ipc::Channel<Vec<crate::page_translation::SentenceOutput>>,
 ) -> Result<crate::page_translation::PageTranslation, String> {
-    crate::page_translation::translate_page(&state.db, &request, || async {
-        let provider = state
-            .db
-            .lock()
-            .map_err(|_| "데이터베이스 잠금 오류")?
-            .ai_provider()?;
-        let count = request.sentences.len();
-        let mut stream = crate::page_translation::SentenceStream::default();
-        let progress = move |delta: &str| {
-            let rows = stream.push(delta, count);
-            if !rows.is_empty() {
-                let _ = on_progress.send(rows);
-            }
-        };
-        match provider {
-            AiProvider::Api => {
-                ai::translate_page_stream(&state.client, &state.api_key, &request, progress).await
-            }
-            AiProvider::Chatgpt | AiProvider::Claude => {
-                let mut payload = crate::page_translation::request_body(&request);
-                let preferences = state
-                    .db
-                    .lock()
-                    .map_err(|_| "데이터베이스 잠금 오류")?
-                    .provider_preferences(provider)?;
-                payload["model"] = serde_json::json!(preferences.translation_model);
-                payload["chatEffort"] = serde_json::json!(preferences.translation_effort);
-                tauri::async_runtime::spawn_blocking(move || {
-                    let state = app.state::<AppState>();
-                    if provider == AiProvider::Claude {
-                        state.claude.lookup_stream(payload, progress)
-                    } else {
-                        state.codex.lookup_stream(payload, progress)
-                    }
-                })
-                .await
-                .map_err(|_| "ChatGPT 본문 번역 작업 오류")?
+    let cancellation = state.translation_jobs.get(&request_id)?;
+    let provider = state.db.lock().map_err(|_| "데이터베이스 잠금 오류")?.ai_provider()?;
+    let preferences = state.db.lock().map_err(|_| "데이터베이스 잠금 오류")?.provider_preferences(provider)?;
+    let state = &*state;
+    let stream_channel = on_progress.clone();
+    let result = crate::page_translation::translate_page_cancellable(&state.db, &request, |batch, ids| {
+        let cancellation = cancellation.clone();
+        let app = app.clone();
+        let on_progress = stream_channel.clone();
+        let preferences = preferences.clone();
+        async move {
+            let count = batch.sentences.len();
+            let mut stream = crate::page_translation::SentenceStream::default();
+            let progress = move |delta: &str| {
+                let rows: Vec<_> = stream.push(delta, count).into_iter().filter_map(|mut row| {
+                    let id = ids.get(row.id as usize).copied().flatten()?;
+                    row.id = id; Some(row)
+                }).collect();
+                if !rows.is_empty() { let _ = on_progress.send(rows); }
+            };
+            match provider {
+                AiProvider::Api => cancellation.run(ai::translate_page_stream(&state.client, &state.api_key, &batch, progress)).await,
+                AiProvider::Chatgpt | AiProvider::Claude => {
+                    let mut payload = crate::page_translation::request_body(&batch);
+                    payload["model"] = serde_json::json!(preferences.translation_model);
+                    payload["chatEffort"] = serde_json::json!(preferences.translation_effort);
+                    tauri::async_runtime::spawn_blocking(move || {
+                        let state = app.state::<AppState>();
+                        if provider == AiProvider::Claude { state.claude.lookup_stream_cancellable(payload, cancellation, progress) }
+                        else { state.codex.lookup_stream_cancellable(payload, cancellation, progress) }
+                    }).await.map_err(|_| "본문 번역 작업 오류")?
+                }
             }
         }
-    })
-    .await
+    }, move |rows| { if !rows.is_empty() { let _ = on_progress.send(rows); } }, &cancellation).await;
+    state.translation_jobs.finish(&request_id);
+    result
 }
 
 #[tauri::command]
@@ -977,6 +980,7 @@ pub fn run() {
                 codex: codex::CodexClient::new(root.join("chatgpt"), codex::find_binary(&root.join("runtime"), bundled_runtime.as_deref())),
                 claude: claude::ClaudeClient::new(root.join("claude")),
                 dropped_paths: Mutex::new(None),
+                translation_jobs: Default::default(),
             });
             Ok(())
         })
@@ -1004,7 +1008,7 @@ pub fn run() {
             get_chat_provider, set_chat_provider, get_claude_status, start_claude_login, cancel_claude_login, logout_claude, install_claude, get_claude_models,
             get_model_preferences, set_model_preference, get_chatgpt_models, get_paper_chat, ask_paper, select_chat_branch, get_subscription_usage, get_claude_subscription_usage, steer_paper_chat, stop_paper_chat,
             get_ai_provider, set_ai_provider, get_chatgpt_status, start_chatgpt_login, cancel_chatgpt_login, logout_chatgpt,
-            get_history_state, restore_history, open_pdf, get_page_translation, translate_page,
+            get_history_state, restore_history, open_pdf, get_page_translation, begin_page_translation, cancel_page_translation, translate_page,
             read_pdf,
             get_highlights,
             lookup_word

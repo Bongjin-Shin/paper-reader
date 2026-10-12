@@ -23,6 +23,7 @@ desktop = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build", "dep:webki
 tauri-build = { version = "2", features = [], optional = true }
 
 [dependencies]
+tokio = { version = "1", features = ["macros", "sync"] }
 tauri = { version = "2", features = [], optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }
 serde = { version = "1", features = ["derive"] }

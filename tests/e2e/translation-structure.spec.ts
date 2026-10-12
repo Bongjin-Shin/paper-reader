@@ -33,7 +33,7 @@ test('page cards keep captions and notes separate and complete body sentences ac
   await expect(page.locator('.pdf-page[data-page-number="2"] .translation-source-mark')).toHaveCount(1);
   const cards = await page.locator('.translation-page').evaluateAll(els => els.map(el => {
     const style = getComputedStyle(el), box = el.getBoundingClientRect();
-    return { top: box.top, bottom: box.bottom, height: box.height, minHeight: parseFloat(style.minHeight), background: style.backgroundColor, border: style.borderTopWidth };
+    return { top: box.top, bottom: box.bottom, height: box.height, minHeight: parseFloat(style.minHeight), background: style.backgroundColor, border: style.borderLeftWidth };
   }));
   expect(cards[1].top - cards[0].bottom).toBeGreaterThanOrEqual(20);
   expect(cards[0].background).toBe('rgb(255, 255, 255)'); expect(cards[0].border).toBe('1px');
@@ -47,10 +47,10 @@ test('hover only highlights even when the matching translated sentence is offscr
   await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   await expect(page.locator('.translated-sentence')).toHaveCount(4);
   const target = page.locator('[data-sentence-id="1"]');
-  const pane = (await page.locator('.translation-content').boundingBox())!;
+  const pane = (await page.locator('.reader').boundingBox())!;
   expect((await target.boundingBox())!.y).toBeGreaterThan(pane.y + pane.height);
-  const position = () => page.evaluate(() => [...document.querySelectorAll('.reader, .translation-content')].map(e => [e.scrollTop, e.scrollLeft]));
-  await expect.poll(() => page.locator('.translation-content').evaluate(el => el.scrollTop)).toBe(0);
+  const position = () => page.evaluate(() => [...document.querySelectorAll('.reader, .translation-page-content')].map(e => [e.scrollTop, e.scrollLeft]));
+  await page.locator('.reader').evaluate(el => { el.scrollTop = 0; });
   const before = await position();
   const source = await wordBox(page, 'Another asymptotic result appears here.');
   await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
@@ -60,7 +60,7 @@ test('hover only highlights even when the matching translated sentence is offscr
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   expect(await position()).toEqual(before);
   const visible = await page.locator('.translated-sentence').first().evaluate(el => {
-    const clip = el.closest('.translation-content')!.getBoundingClientRect();
+    const clip = el.closest('.reader')!.getBoundingClientRect();
     const r = [...el.getClientRects()].find(r => r.bottom > clip.top + 8 && r.top < clip.bottom - 8)!;
     return { x: r.left + r.width / 2, y: (Math.max(r.top, clip.top + 8) + Math.min(r.bottom, clip.bottom - 8)) / 2 };
   });
@@ -74,13 +74,16 @@ test('retranslation bypasses a saved page, preserves it on failure, and saves Ma
   await page.getByRole('button', { name: '본문 번역', exact: true }).click(); await startPageTranslation(page);
   const button = page.getByRole('button', { name: '1페이지 재번역' });
   await expect(button).toBeEnabled();
+  await expect(page.locator('.translated-sentence')).toHaveCount(4);
   const original = await page.locator('.translated-sentences').textContent();
   await page.evaluate(() => { (window as any).__pageFail = true; (window as any).__pageDelay = 500; });
-  await button.click(); await expect(button).toBeDisabled();
+  await button.click(); await expect(button).toBeEnabled();
+  await expect(page.getByRole('button',{name:'1페이지 번역 중단'})).toBeVisible();
   await expect(page.locator('.translation-page').first().getByRole('alert')).toContainText('실패');
   expect(await page.locator('.translated-sentences').textContent()).toBe(original);
   await page.evaluate(() => { (window as any).__pageFail = false; (window as any).__longPageTranslation = '**새 번역**과 *기울임*, $x^2$ 수식입니다.'; });
-  await button.click(); await expect(button).toBeDisabled();
+  await button.click(); await expect(button).toBeEnabled();
+  await expect(page.getByRole('button',{name:'1페이지 번역 중단'})).toBeVisible();
   await expect(page.locator('.translated-sentence strong')).toHaveCount(4);
   await expect(page.locator('.translated-sentence em')).toHaveCount(4);
   await expect(page.locator('.translated-sentence .katex')).toHaveCount(4);

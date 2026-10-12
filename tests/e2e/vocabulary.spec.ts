@@ -167,7 +167,10 @@ test('reader scroll, fit zoom and cached page nodes survive Vocabulary navigatio
   await installBackend(page, undefined, makeScrollPdf()); await open(page);
   await page.getByRole('button', { name: '페이지 너비 맞춤' }).click();
   const target = page.locator('.pdf-page[data-page-number="8"]');
-  await target.evaluate(el => { document.querySelector('.reader')!.scrollTop = (el as HTMLElement).offsetTop; });
+  await target.evaluate(el => {
+    const reader = document.querySelector('.reader')!;
+    reader.scrollTop += el.getBoundingClientRect().top - reader.getBoundingClientRect().top;
+  });
   await expect(target).toHaveAttribute('data-rendered-scale');
   await page.evaluate(() => {
     const target = document.querySelector('.pdf-page[data-page-number="8"]')!;

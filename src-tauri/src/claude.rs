@@ -445,7 +445,7 @@ impl ClaudeClient {
                 sender,
             });
         }
-        let result = self.run(payload, Some(receiver), &mut progress);
+        let result = self.run(payload, Some(receiver), None, &mut progress);
         if let Ok(mut guard) = self.live.lock() {
             *guard = None;
         }
@@ -457,7 +457,7 @@ impl ClaudeClient {
         mut progress: impl FnMut(&str),
     ) -> Result<AiResult, String> {
         let mut previous = String::new();
-        let (_, result) = self.run(payload, None, &mut |event| {
+        let (_, result) = self.run(payload, None, None, &mut |event| {
             if let ChatEvent::Answer { text } = event {
                 if let Some(delta) = text.strip_prefix(&previous) {
                     progress(delta);
@@ -467,6 +467,17 @@ impl ClaudeClient {
         })?;
         Ok(result)
     }
+    pub fn lookup_stream_cancellable(&self, payload: Value, cancellation: crate::cancellation::Cancellation, mut progress: impl FnMut(&str)) -> Result<AiResult, String> {
+        cancellation.check()?;
+        let mut previous = String::new();
+        let (_, result) = self.run(payload, None, Some(&cancellation), &mut |event| {
+            if let ChatEvent::Answer { text } = event {
+                if let Some(delta) = text.strip_prefix(&previous) { progress(delta); }
+                previous = text;
+            }
+        })?;
+        cancellation.check()?; Ok(result)
+    }
     pub fn lookup(&self, payload: Value) -> Result<AiResult, String> {
         self.lookup_stream(payload, |_| {})
     }
@@ -474,6 +485,7 @@ impl ClaudeClient {
         &self,
         payload: Value,
         controls: Option<mpsc::Receiver<Control>>,
+        cancellation: Option<&crate::cancellation::Cancellation>,
         progress: &mut impl FnMut(ChatEvent),
     ) -> Result<(ChatReply, AiResult), String> {
         if !self.status().connected {
@@ -512,6 +524,7 @@ impl ClaudeClient {
                 .unwrap_or("한국어로 답변하세요. 도구를 사용하지 마세요."),
         )?;
         session.initialize()?;
+        if let Some(cancel) = cancellation { cancel.check()?; }
         session.send(json!({"type":"user","message":{"role":"user","content":payload["input"].as_str().unwrap_or("")},"parent_tool_use_id":null}))?;
         progress(ChatEvent::Ready);
         let mut text = TextStream::default();
@@ -529,6 +542,7 @@ impl ClaudeClient {
         };
         let mut deadline = Instant::now() + Duration::from_secs(900);
         loop {
+            if let Some(cancel) = cancellation { cancel.check()?; }
             if self.stopped.load(Ordering::Relaxed) {
                 return Err("앱이 종료되어 Claude 요청을 중단했습니다.".into());
             }

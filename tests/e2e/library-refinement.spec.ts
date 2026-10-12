@@ -69,8 +69,8 @@ test('sorting covers displayed columns both directions, missing values last, and
   await library(page); const titles = page.locator('.library-open-paper');
   await expect(titles).toHaveText(['Paper A', 'Paper B', 'Paper C']);
   await expect(page.getByLabel('정렬 기준', { exact: true })).toHaveCount(0);
-  await expect(page.locator('.library-columns > span')).toHaveText('메모');
-  await expect(page.locator('.library-columns button')).toHaveCount(5);
+  await expect(page.getByRole('button', { name: '메모 정렬', exact: true })).toBeVisible();
+  await expect(page.locator('.library-columns button')).toHaveCount(6);
   const titleHeader = page.getByRole('button', { name: '논문 제목 정렬', exact: true });
   await titleHeader.focus(); await page.keyboard.press('Enter');
   await expect(titles).toHaveText(['Paper C', 'Paper B', 'Paper A']);

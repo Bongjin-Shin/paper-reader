@@ -65,7 +65,8 @@ test('five colors persist and cancellation removes only the selected highlight, 
   await page.reload(); await page.getByRole('button', { name: 'PDF 파일 열기' }).click();
   await expect(page.getByRole('button', { name: '분홍 하이라이트' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.word-highlight[data-color="blue"]')).toHaveCount(1);
-  await select(page); // Cancellation is also available in the action bubble.
+  const selectedWord = await wordBox(page);
+  await page.mouse.click(selectedWord.x + selectedWord.width / 2, selectedWord.y + selectedWord.height / 2);
   await expect(page.getByRole('button', { name: '하이라이트 취소' })).toBeVisible();
   await page.getByRole('button', { name: '하이라이트 취소' }).click();
   await expect(page.locator('.word-highlight')).toHaveCount(1);

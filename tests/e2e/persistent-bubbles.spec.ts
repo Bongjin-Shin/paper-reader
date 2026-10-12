@@ -61,7 +61,11 @@ test('pending results survive other lookups, navigation and highlight deletion u
   await page.getByRole('button', { name: '뒤로가기', exact: true }).click();
   await expect(first).toContainText('점근적인'); await expect(second).toContainText('극한에서');
   await expect(bubbles(page)).toHaveCount(2);
-  await first.getByRole('button', { name: '하이라이트 취소' }).click();
+  const marked = await wordBox(page, 'asymptotic', 20);
+  await page.mouse.click(marked.x + marked.width / 2, marked.y + marked.height / 2);
+  const saved = page.getByRole('dialog').filter({ has: page.getByRole('button', { name: '하이라이트 취소' }) });
+  await saved.getByRole('button', { name: '하이라이트 취소' }).click();
+  await page.getByRole('dialog').last().getByRole('button', { name: '말풍선 닫기' }).click();
   await expect(page.locator('.word-highlight')).toHaveCount(0); await expect(first).toContainText('점근적인');
   await page.keyboard.press('Control+z'); await expect(page.locator('.word-highlight')).toHaveCount(1);
   await expect(first).toBeVisible(); await expect(second).toBeVisible();

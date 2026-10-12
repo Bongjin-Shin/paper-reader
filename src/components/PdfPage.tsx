@@ -1,13 +1,14 @@
-import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { TextLayer, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from 'pdfjs-dist';
 import { errorMessage } from '../lib/backend';
 import { isSingleEnglishWord, pdfToStyle, readDragSelection, readWordSelection, registerTextLayer } from '../lib/selection';
-import { highlightCss } from '../lib/highlights';
+import { highlightAt, highlightCss } from '../lib/highlights';
 import type { Highlight, WordSelection, PdfRect } from '../types';
 import { canvasSize, type PageRenderCache } from '../lib/pageRendering';
 import { registerPdfCopyLayer } from '../lib/pdfClipboard';
 import { registerSearchTextLayer, type PdfSearchMatch } from '../lib/pdfSearch';
 import { PdfSearchLayer } from './PdfSearchLayer';
+import { syncPageGeometry } from '../lib/pageGeometry';
 
 interface Props {
   pdf: PDFDocumentProxy;
@@ -44,6 +45,10 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
   renderCallbackRef.current = onRendered;
   const pointerOrigin = useRef<{ x: number; y: number } | null>(null);
   const dragged = useRef(false);
+
+  useLayoutEffect(() => {
+    if (hostRef.current) syncPageGeometry(hostRef.current, displayScale.current, surface.current?.scale ?? renderScale);
+  });
 
   useEffect(() => {
     const finishDrag = (event: MouseEvent) => {
@@ -153,6 +158,10 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
         registerTextLayer(layer, viewport);
         if (textLayer) { registerPdfCopyLayer(layer, page, content, textLayer.textDivs); registerSearchTextLayer(layer, textLayer.textDivs); }
         if (!existing) textHostRef.current!.replaceChildren(text);
+        // Commit the new surface's scale with the canvas, before React's async
+        // state update. Otherwise a frame can display the new canvas at the old
+        // preview ratio (especially when zooming back to a cached scale).
+        syncPageGeometry(hostRef.current!, displayScale.current, renderScale);
         if (old) { old.canvas.width = old.canvas.height = 0; }
         committed = true;
         setNoText(!content.items.some(item => 'str' in item && item.str.trim().length));
@@ -190,11 +199,8 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
     data-pdf-width={viewport ? viewport.width / scale : 612}
     data-pdf-height={viewport ? viewport.height / scale : 792}
     data-rendered-scale={ready && renderedScale === displayScale.current ? renderedScale : undefined}
-    style={{ width: (viewport ? viewport.width / scale : 612) * displayScale.current,
-      height: (viewport ? viewport.height / scale : 792) * displayScale.current,
-      '--scale-factor': scale, '--user-unit': page?.userUnit ?? 1 } as React.CSSProperties}>
-    <div className="page-surface" data-painted-scale={renderedScale ?? renderScale} style={{ width: paintedViewport?.width, height: paintedViewport?.height,
-      transform: `scale(${displayScale.current / (renderedScale ?? renderScale)})`, '--scale-factor': renderedScale ?? renderScale,
+    style={{ '--scale-factor': scale, '--user-unit': page?.userUnit ?? 1 } as React.CSSProperties}>
+    <div className="page-surface" style={{ '--scale-factor': renderedScale ?? renderScale,
       '--total-scale-factor': 'calc(var(--scale-factor) * var(--user-unit))' } as React.CSSProperties}>
     <div ref={canvasHostRef} className="canvas-layer" />
     {resident && paintedViewport && <HighlightLayer viewport={paintedViewport} highlights={highlights} />}
@@ -217,7 +223,7 @@ export const PdfPage = memo(function PdfPageView({ pdf, pageNumber, scale, rende
       const bounds = hostRef.current.getBoundingClientRect();
       const [x, y] = viewport.convertToPdfPoint((event.clientX - bounds.left) * viewport.width / bounds.width,
         (event.clientY - bounds.top) * viewport.height / bounds.height);
-      const highlight = highlights.find(h => h.position.rects.some(r => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]));
+      const highlight = highlightAt(highlights, x, y);
       if (!highlight) return;
       const rect = highlight.position.rects.find(r => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])!;
       const box = pdfToStyle(rect, viewport);

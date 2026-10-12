@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { syncPageGeometry } from './pageGeometry';
 
 export const clampZoom = (scale: number) => Math.round(Math.max(.1, Math.min(4, scale)) * 10000) / 10000;
 export const fitScale = (availableWidth: number, pageWidth: number, padding: number) => clampZoom((availableWidth - padding) / pageWidth);
 
-export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDocumentProxy | null, onSettled: () => void) {
+export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDocumentProxy | null, onSettled: () => void, sideWidth = 0) {
   const [scale, setScale] = useState(1.25);
   const [renderScale, setRenderScale] = useState(1.25);
   const [renderRevision, setRenderRevision] = useState(0);
@@ -14,6 +15,7 @@ export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDoc
   const pageWidth = useRef(612);
   const callback = useRef(onSettled);
   callback.current = onSettled;
+  const reservedWidth = useRef(sideWidth); reservedWidth.current = sideWidth;
   const zooming = useRef(false);
   const frame = useRef(0);
   const qualityTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -32,7 +34,7 @@ export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDoc
     if (next === scaleRef.current) return;
     host.dispatchEvent(new Event('readerzoomstart'));
     const bounds = host.getBoundingClientRect();
-    const position = point ?? { x: bounds.left + host.clientWidth / 2, y: bounds.top + Math.min(180, host.clientHeight / 2) };
+    const position = point ?? { x: bounds.left + Math.max(60, host.clientWidth - reservedWidth.current) / 2, y: bounds.top + Math.min(180, host.clientHeight / 2) };
     const pages = host.querySelectorAll<HTMLElement>('.pdf-page');
     const firstBelow = (y: number) => {
       let low = 0, high = pages.length;
@@ -58,8 +60,13 @@ export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDoc
     const pages = host?.querySelector('.pages');
     if (!host || !pages) return;
     const style = getComputedStyle(pages);
-    apply(fitScale(host.clientWidth, pageWidth.current, parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)));
+    apply(fitScale(host.clientWidth, pageWidth.current, parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + reservedWidth.current));
   }, [apply, reader]);
+
+  useLayoutEffect(() => {
+    // Respect the user's zoom mode when opening or resizing translations.
+    if (fittingRef.current) fit();
+  }, [sideWidth, fit]);
 
   useEffect(() => {
     if (!pdf) return;
@@ -78,10 +85,7 @@ export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDoc
       host.dataset.displayScale = String(scale);
       for (const page of host.querySelectorAll<HTMLElement>('.pdf-page')) {
         if (page.dataset.renderedScale !== String(scale)) page.removeAttribute('data-rendered-scale');
-        page.style.width = `${Number(page.dataset.pdfWidth) * scale}px`;
-        page.style.height = `${Number(page.dataset.pdfHeight) * scale}px`;
-        const surface = page.querySelector<HTMLElement>('.page-surface');
-        if (surface) surface.style.transform = `scale(${scale / Number(surface.dataset.paintedScale)})`;
+        syncPageGeometry(page, scale);
       }
       const saved = anchor.current;
       if (saved && host.contains(saved.page)) {

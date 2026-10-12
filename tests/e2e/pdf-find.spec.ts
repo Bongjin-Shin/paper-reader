@@ -4,7 +4,7 @@ for (const rotation of [0,90]) test(`Ctrl+F searches all pages and highlights th
  await installBackend(page,{delay:0,fail:false,rotation,userUnit:1}); await open(page);
  await page.getByRole('button',{name:'본문 번역',exact:true}).click(); await startPageTranslation(page);
  await expect(page.locator('.translated-sentence')).toHaveCount(4);
- const translation=page.locator('.translation-content'), before=await translation.evaluate(e=>e.scrollTop);
+ const translation=page.locator('.translation-page-content').first(), before=await translation.evaluate(e=>e.scrollTop);
  await page.keyboard.press('Control+f'); const input=page.getByRole('textbox',{name:'본문 검색어'});
  await expect(input).toBeFocused(); await input.fill('asymptotic');
  const status=page.getByRole('search',{name:'본문 내 찾기'}).getByRole('status'); await expect(status).toHaveText('1/4');
@@ -16,6 +16,7 @@ for (const rotation of [0,90]) test(`Ctrl+F searches all pages and highlights th
  await input.press('Enter'); await expect(status).toHaveText('3/4');
  await expect(page.locator('.pdf-page[data-page-number="2"] .pdf-search-mark.current')).toBeInViewport();
  expect(await translation.evaluate(e=>e.scrollTop)).toBe(before);
+ await expect(page.locator('.translation-page').nth(1)).toBeInViewport();
  await input.press('Shift+Enter'); await expect(status).toHaveText('2/4');
  await input.press('Shift+Enter'); await input.press('Shift+Enter'); await expect(status).toHaveText('4/4');
  await page.getByRole('button',{name:'확대',exact:true}).click();
