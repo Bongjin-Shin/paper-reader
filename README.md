@@ -6,6 +6,8 @@ PDF 원문과 한국어 번역을 나란히 보면서 논문을 읽을 수 있�
 
 Windows와 Ubuntu용으로 개발하고 있습니다.
 
+설치 파일은 [GitHub Releases](https://github.com/Bongjin-Shin/paper-reader/releases)의 **Assets**에서 내려받을 수 있습니다. Windows는 `.exe`, Ubuntu는 `.deb` 파일을 선택하세요.
+
 ## 주요 기능
 
 - **원문 옆 페이지 번역** — 각 PDF 페이지 옆에 한국어 번역을 표시합니다. 필요한 페이지를 직접 번역하고, 진행 중에도 중단하거나 재번역할 수 있습니다.
