@@ -1,0 +1,56 @@
+import { expect, test } from '@playwright/test';
+import { installBackend, open, startPageTranslation, chooseChatOption } from './helpers';
+
+test('keyboard zoom targets the PDF, hovered translation or active chat draft without zooming the entire app', async ({ page }) => {
+  await installBackend(page); await open(page);
+  const reader = page.locator('.reader'), toolbar = page.locator('.toolbar');
+  const toolbarFont = await toolbar.evaluate(el => getComputedStyle(el).fontSize);
+  await page.locator('.pdf-page').first().hover({ position: { x: 80, y: 80 } });
+  await page.keyboard.press('Control+='); await expect(reader).toHaveAttribute('data-display-scale', '1.5');
+  await page.keyboard.press('Control+Shift+Equal'); await expect(reader).toHaveAttribute('data-display-scale', '1.75');
+  await page.keyboard.press('Control+-'); await expect(reader).toHaveAttribute('data-display-scale', '1.5');
+  await page.keyboard.press('Control+0'); await expect(reader).toHaveAttribute('data-display-scale', '1');
+  await page.getByRole('button', { name: '본문 번역', exact: true }).click();
+  await startPageTranslation(page);
+  await page.locator('.translation-page-content').first().hover();
+  await page.keyboard.press('Control+=');
+  await expect(page.getByRole('button', { name: '번역 글자 크기 초기화' })).toHaveText('110%');
+  await expect(reader).toHaveAttribute('data-display-scale', '1');
+  await page.keyboard.press('Control+-');
+  await expect(page.getByRole('button', { name: '번역 글자 크기 초기화' })).toHaveText('100%');
+  await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
+  await page.getByLabel('논문 질문').fill('내용은 그대로 유지');
+  await page.keyboard.press('Control+=');
+  await expect(page.getByRole('button', { name: '채팅 글자 크기 초기화' })).toHaveText('110%');
+  await page.keyboard.press('Control+-');
+  await expect(page.getByRole('button', { name: '채팅 글자 크기 초기화' })).toHaveText('100%');
+  await expect(page.getByLabel('논문 질문')).toHaveValue('내용은 그대로 유지');
+  await expect(reader).toHaveAttribute('data-display-scale', '1');
+  expect(await toolbar.evaluate(el => getComputedStyle(el).fontSize)).toBe(toolbarFont);
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.keyboard.press('Control+=');
+  await page.getByRole('button', { name: 'PDF Reader', exact: true }).click();
+  await expect(reader).toHaveAttribute('data-display-scale', '1');
+});
+
+test('model and effort live below the composer; changing them or refreshing never submits a draft', async ({ page }) => {
+  await installBackend(page); await open(page);
+  await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
+  const draft = page.getByLabel('논문 질문'); await draft.fill('아직 보내지 않을 질문');
+  const inputBox = (await draft.boundingBox())!;
+  const controls = page.getByLabel('채팅 모델 설정');
+  expect((await controls.boundingBox())!.y).toBeGreaterThanOrEqual(inputBox.y + inputBox.height);
+  const model = page.getByLabel('채팅 모델', { exact: true });
+  await expect(model).toBeEnabled();
+  await chooseChatOption(page, '채팅 모델', 'Luna');
+  await controls.getByRole('button', { name: '모델 목록 새로고침' }).click();
+  await expect(model).toBeEnabled();
+  await expect(draft).toHaveValue('아직 보내지 않을 질문');
+  expect(await page.evaluate(() => (window as any).__calls.filter((c: any) => c.command === 'ask_paper'))).toHaveLength(0);
+  await page.screenshot({ path: 'test-results/chat-bottom-controls.png' });
+  await page.setViewportSize({ width: 680, height: 720 });
+  const composer = page.locator('.chat-composer');
+  expect(await composer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await expect(page.getByRole('button', { name: '질문 보내기', exact: true })).toBeVisible();
+  await expect(page.getByLabel('앱 버전')).toHaveText('v0.1.1');
+});

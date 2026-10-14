@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { installBackend, open, select, startPageTranslation } from './helpers';
+import { installBackend, open, select, startPageTranslation, chooseChatOption } from './helpers';
 
 test('subscription translation and chat models are independent, effort follows the model, and chat persists', async ({ page }) => {
   await installBackend(page); await open(page);
@@ -12,9 +12,11 @@ test('subscription translation and chat models are independent, effort follows t
   await page.getByLabel('번역 effort').selectOption('medium');
   await page.getByRole('button', { name: '닫기', exact: true }).click();
   await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
-  await page.getByLabel('채팅 모델', { exact: true }).selectOption('test-reasoner');
-  await expect(page.getByLabel('채팅 effort').locator('option')).toHaveText(['기본값 · medium', 'medium', 'high']);
-  await page.getByLabel('채팅 effort').selectOption('high');
+  await chooseChatOption(page, '채팅 모델', 'Test Reasoner');
+  await page.getByRole('combobox', { name: '채팅 effort', exact: true }).click();
+  await expect(page.locator('.upward-select-menu [role=option] > span:first-child')).toHaveText(['기본값 · medium', 'medium', 'high']);
+  await page.keyboard.press('Escape');
+  await chooseChatOption(page, '채팅 effort', 'high');
   await page.getByLabel('논문 질문').fill('이 방법의 복잡도를 설명해줘');
   await page.getByRole('button', { name: '질문 보내기' }).click();
   await expect(page.locator('.chat-answer')).toContainText('복잡도');
@@ -23,13 +25,13 @@ test('subscription translation and chat models are independent, effort follows t
   expect(request.context).toContain('asymptotic'); expect(request.context).toContain('[p. 2;');
   await page.getByRole('button', { name: '[p. 2]', exact: true }).click();
   expect(await page.locator('.reader').evaluate(el => el.scrollTop)).toBeGreaterThan(500);
-  await page.getByLabel('채팅 모델', { exact: true }).selectOption('gpt-5.6-luna');
-  await expect(page.getByLabel('채팅 effort')).toHaveValue('');
+  await chooseChatOption(page, '채팅 모델', 'Luna');
+  await expect(page.getByLabel('채팅 effort')).toHaveAttribute('data-value', '');
   const settings = await page.evaluate(() => JSON.parse(localStorage.getItem('test-models')!));
   expect(settings.translationModel).toBe('test-reasoner'); expect(settings.translationEffort).toBe('medium'); expect(settings.chatModel).toBe('gpt-5.6-luna');
   await page.reload(); await open(page); await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
   await expect(page.locator('.chat-answer')).toContainText('복잡도');
-  await expect(page.getByLabel('채팅 모델', { exact: true })).toHaveValue('gpt-5.6-luna');
+  await expect(page.getByLabel('채팅 모델', { exact: true })).toHaveAttribute('data-value', 'gpt-5.6-luna');
 });
 
 test('chat failure retains the question for retry and closing during a request retains the answer', async ({ page }) => {
@@ -128,9 +130,10 @@ test('chat renders math and Markdown, accepts input while thinking and replaces 
   await expect(page.locator('.chat-answer li')).toHaveCount(2);
   await expect(page.getByLabel('논문 질문')).toBeEnabled();
   await page.getByLabel('논문 질문').fill('기호의 의미도 알려줘'); await page.getByRole('button', { name: '추가 질문 보내기', exact: true }).click();
+  await page.getByRole('button', { name: '대기 질문 1 바로 보내기' }).click();
   await expect(page.locator('.chat-question').last()).toContainText('기호의 의미도');
   await expect(page.getByLabel('논문 질문')).toHaveValue('');
-  await expect(page.locator('.chat-actions button')).toHaveCount(1);
+  await expect(page.locator('.chat-actions > .chat-icon-button')).toHaveCount(1);
   await expect(page.getByRole('button', { name: '다음 답변으로 예약' })).toHaveCount(0);
   await page.screenshot({ path: 'test-results/chat-math-streaming.png' });
   await page.getByRole('button', { name: '답변 중단', exact: true }).click();
@@ -144,18 +147,20 @@ test('chat renders math and Markdown, accepts input while thinking and replaces 
   await expect(page.locator('.chat-exchange').first()).toContainText('답변 중단됨');
 });
 
-test('failed mid-turn input preserves the draft for sending after completion', async ({ page }) => {
+test('failed immediate input preserves the queued question for sending after completion', async ({ page }) => {
   await installBackend(page); await open(page);
   await page.evaluate(() => { (window as any).__chatDelay = 2200; (window as any).__steerFail = true; });
   await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
   await page.getByLabel('논문 질문').fill('첫 질문'); await page.getByRole('button', { name: '질문 보내기', exact: true }).click();
   await expect(page.getByRole('button', { name: '답변 중단', exact: true })).toBeEnabled();
   await page.getByLabel('논문 질문').fill('둘째 질문'); await page.getByRole('button', { name: '추가 질문 보내기', exact: true }).click();
+  await page.getByRole('button', { name: '대기 질문 1 바로 보내기' }).click();
   await expect(page.getByRole('alert')).toContainText('추가 질문을 반영하지 못했습니다.');
-  await expect(page.getByLabel('논문 질문')).toHaveValue('둘째 질문');
-  await expect(page.getByRole('button', { name: '질문 보내기', exact: true })).toBeEnabled();
+  await expect(page.getByLabel('대기 중인 질문')).toContainText('둘째 질문');
+  await expect(page.getByLabel('논문 질문')).toHaveValue('');
+  await expect(page.getByRole('button', { name: '답변 중단', exact: true })).toHaveCount(0);
   await page.evaluate(() => { (window as any).__chatDelay = 0; });
-  await page.getByRole('button', { name: '질문 보내기', exact: true }).click();
+  await page.getByRole('button', { name: '대기 질문 1 바로 보내기' }).click();
   await expect(page.locator('.chat-exchange')).toHaveCount(2);
   expect(await page.evaluate(() => (window as any).__calls.filter((c: any) => c.command === 'ask_paper').map((c: any) => c.args.request.question))).toEqual(['첫 질문', '둘째 질문']);
 });

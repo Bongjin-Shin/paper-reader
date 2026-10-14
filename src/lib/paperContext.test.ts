@@ -9,3 +9,11 @@ it('bounds long context while prioritizing relevant passages and disclosing omis
   const text = paperContext(pages, 'specialmethod', 70, 12000);
   expect(text).toContain('[p. 66;'); expect(text).toContain('[p. 70;'); expect(text).toContain('생략'); expect(text.length).toBeLessThan(12100);
 });
+
+it('budgets UTF-8 bytes before ranking so multilingual evidence and its page labels stay together', () => {
+  const pages = Array.from({ length: 80 }, (_, i) => ({ page: i + 1, text: i === 40 ? 'specificdefinition '.repeat(220) : '한글 논문 내용 '.repeat(350) }));
+  const text = paperContext(pages, 'specificdefinition', 50);
+  expect(new TextEncoder().encode(text).length).toBeLessThanOrEqual(80000);
+  expect(text).toContain('[p. 41;'); expect(text).toContain('[p. 50;');
+  expect(text).toContain('생략된 부분');
+});

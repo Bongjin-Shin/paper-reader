@@ -88,7 +88,7 @@ fn failures_tools_and_disconnect_are_not_saved_as_success() {
 #[test]
 fn queued_followups_stream_once_and_stop_preserves_partial_answer() {
     for stop in [false, true] {
-        let (_dir, client) = client(if stop { "stop" } else { "queue" });
+        let (dir, client) = client(if stop { "stop" } else { "queue" });
         let client = Arc::new(client);
         let worker = client.clone();
         let (send, recv) = mpsc::channel();
@@ -122,6 +122,14 @@ fn queued_followups_stream_once_and_stop_preserves_partial_answer() {
         } else {
             assert_eq!(answer.followups, vec!["추가 설명"]);
             assert_eq!(answer.answer, "한국어 답변 [p. 1]\n\n한국어 답변 [p. 1]");
+            let requests: Vec<Value> = fs::read_to_string(dir.path().join("requests.jsonl")).unwrap()
+                .lines().map(|line| serde_json::from_str(line).unwrap()).collect();
+            let inputs: Vec<_> = requests.iter().filter(|r| r["type"] == "user").collect();
+            assert_eq!(inputs.len(), 2);
+            let text = inputs[1]["message"]["content"].as_str().unwrap();
+            assert!(text.contains("기존 질문의 목적과 아직 답하지 않은 부분을 유지"));
+            assert!(text.contains("정정·조건·설명 방식 변경은 이어지는 답변에 바로 적용"));
+            assert!(text.ends_with("추가 설명"));
         }
     }
 }

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { installBackend, open, select, wordBox } from './helpers';
+import { installBackend, open, select, wordBox, chooseChatOption } from './helpers';
 
 async function clickWord(page: Page, word = 'asymptotic', pageNumber = 1) {
   const box = await wordBox(page, word, 0, pageNumber);
@@ -49,8 +49,8 @@ test('dragging across a mark never offers deletion; clicking overlaps removes on
 test('AI question attaches the selection without sending, preserves a draft and model, and saves source context with the answer', async ({ page }) => {
   await installBackend(page); await open(page);
   await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
-  await page.getByLabel('채팅 모델', { exact: true }).selectOption('test-reasoner');
-  await page.getByLabel('채팅 effort').selectOption('high');
+  await chooseChatOption(page, '채팅 모델', 'Test Reasoner');
+  await chooseChatOption(page, '채팅 effort', 'high');
   await page.getByLabel('논문 질문').fill('이 표현의 의미를 설명해 줘');
   await page.getByRole('button', { name: '논문 채팅 닫기' }).click();
   await page.locator('.pdf-page').nth(1).evaluate(el => el.scrollIntoView({ block: 'start' }));
@@ -60,8 +60,8 @@ test('AI question attaches the selection without sending, preserves a draft and 
   await expect(source).toContainText('asymptotic'); await expect(source).toContainText('2페이지');
   await expect(page.getByLabel('논문 질문')).toHaveValue('이 표현의 의미를 설명해 줘');
   await expect(page.getByLabel('논문 질문')).toBeFocused();
-  await expect(page.getByLabel('채팅 모델', { exact: true })).toHaveValue('test-reasoner');
-  await expect(page.getByLabel('채팅 effort')).toHaveValue('high');
+  await expect(page.getByLabel('채팅 모델', { exact: true })).toHaveAttribute('data-value', 'test-reasoner');
+  await expect(page.getByLabel('채팅 effort')).toHaveAttribute('data-value', 'high');
   expect(await page.evaluate(() => (window as any).__calls.filter((c: any) => c.command === 'ask_paper'))).toHaveLength(0);
   // Moving the reader must not change the page attached to this question.
   await page.locator('.reader').evaluate(el => { el.scrollTop = 0; });
@@ -79,7 +79,7 @@ test('AI question attaches the selection without sending, preserves a draft and 
   await expect(page.getByRole('region', { name: 'AI 질문에 첨부한 원문' })).toHaveCount(0);
 });
 
-test('AI source can be removed or replaced, and a failed mid-answer question keeps its source and draft for retry', async ({ page }) => {
+test('AI source can be removed or replaced, and a failed immediate question keeps its source in the queue for retry', async ({ page }) => {
   await installBackend(page); await open(page); await dragSentence(page);
   const selected = await page.evaluate(() => window.getSelection()!.toString());
   await page.getByRole('button', { name: 'AI질문', exact: true }).click();
@@ -97,9 +97,14 @@ test('AI source can be removed or replaced, and a failed mid-answer question kee
   await expect(source.locator('blockquote')).toHaveText('complexity');
   await page.getByLabel('논문 질문').fill('이 단어도 설명해 줘');
   await page.getByRole('button', { name: '추가 질문 보내기' }).click();
-  await expect(page.getByLabel('논문 질문')).toHaveValue('이 단어도 설명해 줘'); await expect(source).toContainText('complexity');
+  await expect(page.getByLabel('논문 질문')).toHaveValue(''); await expect(source).toHaveCount(0);
+  const queued = page.getByLabel('대기 중인 질문');
+  await expect(queued).toContainText('complexity'); await expect(queued).toContainText('이 단어도 설명해 줘');
+  await page.getByRole('button', { name: '대기 질문 1 바로 보내기' }).click();
+  await expect(page.getByRole('alert')).toContainText('추가 질문을 반영하지 못했습니다.');
+  await expect(queued).toContainText('complexity');
   await page.evaluate(() => { (window as any).__steerFail = false; });
-  await page.getByRole('button', { name: '추가 질문 보내기' }).click();
+  await page.getByRole('button', { name: '대기 질문 1 바로 보내기' }).click();
   await expect(source).toHaveCount(0); await expect(page.getByLabel('논문 질문')).toHaveValue('');
   await expect(page.locator('.chat-question').last()).toContainText('complexity');
   await page.getByRole('button', { name: '답변 중단' }).click();

@@ -9,6 +9,7 @@ pub enum ChatEvent {
     Thinking,
     Answer { text: String },
     Accepted { question: String },
+    Context { message: String },
 }
 #[derive(Debug)]
 pub struct ChatReply {
@@ -233,7 +234,7 @@ impl Session {
                             self.request(
                                 "turn/steer",
                                 json!({"threadId":thread_id,"expectedTurnId":turn_id,
-                                "input":[{"type":"text","text":question,"text_elements":[]}]}),
+                                "input":[{"type":"text","text":crate::chat::followup_input(&question),"text_elements":[]}]}),
                             )
                             .and_then(|v| {
                                 if v["turnId"] == turn_id {

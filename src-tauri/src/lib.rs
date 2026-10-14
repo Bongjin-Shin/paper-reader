@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod browser;
 pub mod chat;
+pub mod chat_memory;
 pub mod cancellation;
 pub mod claude;
 pub mod codex;

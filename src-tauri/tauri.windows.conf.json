@@ -1,16 +1,28 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "resources": {
       "resources/windows/codex/": "runtime/"
     },
     "windows": {
-      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["Korean", "English"],
-        "displayLanguageSelector": false
+        "languages": [
+          "Korean",
+          "English"
+        ],
+        "displayLanguageSelector": false,
+        "installerHooks": "../packaging/windows/hooks.nsh",
+        "customLanguageFiles": {
+          "Korean": "../packaging/windows/Korean.nsh"
+        }
       }
     }
   }

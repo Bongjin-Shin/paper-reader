@@ -35,16 +35,8 @@ export function useTextZoom(key: string, root: RefObject<HTMLElement | null>, en
       event.preventDefault(); event.stopPropagation();
       if (event.deltaY) change(current.current + (event.deltaY < 0 ? .1 : -.1), event.target as Element, event.clientY);
     };
-    const keyboard = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing || !accepts(event.target)) return;
-      const key = event.key;
-      if (!['+', '=', '-', '0'].includes(key)) return;
-      event.preventDefault(); event.stopPropagation();
-      change(key === '0' ? 1 : current.current + (key === '-' ? -.1 : .1), event.target as Element);
-    };
     element.addEventListener('wheel', wheel, { passive: false });
-    element.addEventListener('keydown', keyboard);
-    return () => { element.removeEventListener('wheel', wheel); element.removeEventListener('keydown', keyboard); };
+    return () => { element.removeEventListener('wheel', wheel); };
   }, [root, enabled, selector, change]);
   return { scale, step: (direction: number) => change(current.current + direction * .1), reset: () => change(1) };
 }

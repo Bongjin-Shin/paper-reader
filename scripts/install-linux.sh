@@ -2,7 +2,8 @@
 # Register the built app for this user; no root access or database migration required.
 set -euo pipefail
 project_dir=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-app_image="$project_dir/src-tauri/target/release/bundle/appimage/Paper Vocabulary_0.1.0_amd64.AppImage"
+app_version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$project_dir/src-tauri/tauri.conf.json")
+app_image="$project_dir/src-tauri/target/release/bundle/appimage/Paper Vocabulary_${app_version}_amd64.AppImage"
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}"
 app_dir="$data_dir/paper-vocabulary-app"
 desktop_dir="${PAPER_VOCABULARY_DESKTOP_DIR:-$(xdg-user-dir DESKTOP)}"
@@ -17,7 +18,9 @@ mkdir -p "$app_dir" "$applications_dir" "$desktop_dir"
 # Pin a private copy of the installed official runtime. Authentication remains in
 # the app's own ChatGPT directory; never copy Codex credentials or configuration.
 codex_source=$(command -v codex || true)
-if [[ -n "$codex_source" ]]; then
+# An app update must not fail while overwriting an existing read-only helper bundle.
+# Keep the working private runtime; helper repair/update is managed separately.
+if [[ -n "$codex_source" && ! -x "$app_config_dir/runtime/codex" ]]; then
   codex_source=$(readlink -f -- "$codex_source")
   if [[ $(file -b -- "$codex_source") == ELF* ]]; then
     mkdir -p "$app_config_dir/runtime/bin"

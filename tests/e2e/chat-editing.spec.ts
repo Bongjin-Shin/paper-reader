@@ -58,6 +58,7 @@ test('steered questions are editable and interrupting a revision preserves both 
   await expect(page.getByRole('button', { name: '답변 중단', exact: true })).toBeEnabled();
   await page.getByRole('textbox', { name: '논문 질문', exact: true }).fill('알파의 의미도 알려줘');
   await page.getByRole('button', { name: '추가 질문 보내기', exact: true }).click();
+  await page.getByRole('button', { name: '대기 질문 1 바로 보내기' }).click();
   await expect(page.locator('.chat-question').last()).toContainText('알파의 의미');
   await page.getByRole('button', { name: '답변 중단', exact: true }).click();
   await expect(page.getByRole('button', { name: '추가 질문 수정', exact: true })).toBeEnabled();
@@ -88,11 +89,11 @@ test('composer uses accessible icon controls and refresh visibly rotates once on
   await page.getByRole('textbox', { name: '논문 질문', exact: true }).fill('아이콘으로 보내기'); await sendButton.click();
   const stop = page.getByRole('button', { name: '답변 중단', exact: true });
   await expect(stop).toHaveText(''); await expect(stop.locator('svg rect')).toHaveCount(1);
-  await expect(page.locator('.chat-actions button')).toHaveCount(1);
+  await expect(page.locator('.chat-actions > .chat-icon-button')).toHaveCount(1);
   await page.getByRole('textbox', { name: '논문 질문', exact: true }).fill('추가 질문');
   await expect(page.getByRole('button', { name: '추가 질문 보내기', exact: true })).toBeEnabled();
   await expect(stop).toHaveCount(0);
-  await expect(page.locator('.chat-actions button')).toHaveCount(1);
+  await expect(page.locator('.chat-actions > .chat-icon-button')).toHaveCount(1);
   await page.getByRole('textbox', { name: '논문 질문', exact: true }).fill('');
   await expect(stop).toBeEnabled();
   await stop.click(); await expect(page.locator('.chat-exchange')).toContainText('답변 중단됨');

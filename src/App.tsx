@@ -1,3 +1,6 @@
+import { forgetPaperChatSessions } from './lib/paperChatSession';
+import { usePaneZoomShortcuts } from './lib/usePaneZoomShortcuts';
+import { version as appVersion } from '../package.json';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist';
 import { dataMutationPending, restoreHistory, getLibrary, getPapers, deleteVocabulary, errorMessage, getHighlights, getHighlightColor, setHighlightColor, removeHighlights, getSavedHighlight, importLibraryPdf, importDroppedLibraryPdf, listenFileDrag, lookupText, lookupWord, openDroppedPdf, openPdf, readPdf, updatePaperMetadata } from './lib/backend';
@@ -119,6 +122,7 @@ export default function App() {
   const search = usePdfSearch(pdf, scrollRef, view === 'reader');
   usePaperClipboard(scrollRef, translation, view === 'reader');
   const { scale } = zoom;
+  usePaneZoomShortcuts(!!pdf && view === 'reader', zoom, translationZoom, chatZoom);
   scaleRef.current = scale;
 
   const closeBubble = useCallback((id: number) => {
@@ -161,6 +165,7 @@ export default function App() {
     setUsageRevision(value => value + 1);
   }, []);
   const handleDeletedPapers = useCallback((ids: string[]) => {
+    forgetPaperChatSessions(ids);
     if (!activePaperRef.current || !ids.includes(activePaperRef.current)) return;
     activePaperRef.current = null;
     setPaper(null); setPdf(null); setHighlights([]); readerKeyTarget.current = null;
@@ -439,7 +444,7 @@ export default function App() {
 
   return <div className="app-shell" onDragOver={event => event.preventDefault()} onDrop={event => event.preventDefault()}>
     <header className="toolbar" inert={historyBusy}>
-      <div className="brand"><PaperIcon /><span>Paper Vocabulary</span></div>
+      <div className="brand"><PaperIcon /><span className="brand-name">Paper Vocabulary</span><small className="app-version" aria-label="앱 버전" title={`Paper Vocabulary ${appVersion}`}>v{appVersion}</small></div>
       <div className="history-navigation" role="group" aria-label="방문 기록">
         <button className="history-button" aria-label="뒤로가기" title="뒤로가기" disabled={!navigation.canGoBack || opening || libraryBusy}
           onClick={goBack}>←</button>

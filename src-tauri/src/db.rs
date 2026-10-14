@@ -181,7 +181,7 @@ impl Database {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(db_error)?;
-        if version > 15 {
+        if version > 16 {
             return Err("더 최신 버전에서 만든 데이터베이스입니다.".into());
         }
         if version == 0 {
@@ -318,6 +318,9 @@ impl Database {
                     "COMMIT;"
                 ))
                 .map_err(db_error)?;
+        }
+        if version < 16 {
+            connection.execute_batch(concat!("BEGIN;", include_str!("../migrations/016_chat_memory.sql"), "COMMIT;")).map_err(db_error)?;
         }
         Ok(Self {
             connection,

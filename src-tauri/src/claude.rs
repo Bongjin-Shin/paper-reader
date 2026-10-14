@@ -631,7 +631,7 @@ impl ClaudeClient {
                     usage.cache_write += write;
                     usage.output += u["output_tokens"].as_i64().unwrap_or(0).max(0);
                     if let Some(question) = queued.pop_front() {
-                        session.send(json!({"type":"user","message":{"role":"user","content":question},"parent_tool_use_id":null}))?;
+                        session.send(json!({"type":"user","message":{"role":"user","content":crate::chat::followup_input(&question)},"parent_tool_use_id":null}))?;
                         text.next();
                         deadline = Instant::now() + Duration::from_secs(900);
                     } else {

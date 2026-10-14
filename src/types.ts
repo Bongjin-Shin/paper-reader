@@ -122,7 +122,7 @@ export interface PageTranslation { pageNumber: number; sentences: TranslatedSent
 export interface PageTranslationRequest { paperId: string; pageNumber: number; sentences: SourceSentence[]; force?: boolean }
 export interface TranslationMark { pageNumber: number; rects: PdfRect[] }
 
-export type ChatEvent = { type: 'ready' | 'thinking' } | { type: 'answer'; text: string } | { type: 'accepted'; question: string };
+export type ChatEvent = { type: 'ready' | 'thinking' } | { type: 'answer'; text: string } | { type: 'accepted'; question: string } | { type: 'context'; message: string };
 export interface QuotaWindow { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null }
 export interface SubscriptionUsage { updatedAt: number | null; buckets: { id: string; name: string; primary: QuotaWindow | null; secondary: QuotaWindow | null }[] }
 

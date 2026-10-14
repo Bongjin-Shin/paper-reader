@@ -58,7 +58,7 @@ fn version_four_migration_exposes_existing_papers_and_preserves_all_data() {
         connection
             .query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        15
+        16
     );
     drop(db);
     assert_eq!(
@@ -312,7 +312,7 @@ fn metadata_migration_preserves_upload_time_folder_and_history() {
         connection
             .query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        15
+        16
     );
 }
 

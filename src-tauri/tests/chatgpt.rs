@@ -474,6 +474,12 @@ fn paper_chat_streams_markdown_accepts_steering_and_tracks_quota_during_silence(
     assert_eq!(thread["config"]["model_verbosity"], "high");
     let steer = &calls.iter().find(|r| r["method"] == "turn/steer").unwrap()["params"];
     assert_eq!(steer["expectedTurnId"], "turn-1");
+    let text = steer["input"][0]["text"].as_str().unwrap();
+    assert!(text.contains("기존 질문의 목적과 아직 답하지 않은 부분을 유지"));
+    assert!(text.contains("정정·조건·설명 방식 변경은 이어지는 답변에 바로 적용"));
+    assert!(text.ends_with("기호도 설명해 주세요"));
+    assert!(!calls.iter().any(|r| r["method"] == "turn/interrupt"));
+    assert_eq!(calls.iter().filter(|r| r["method"] == "turn/start").count(), 1);
     assert!(client.control_chat("request-a", None).is_err());
 }
 

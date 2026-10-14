@@ -3,6 +3,12 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+/// Steer the active conversation without replacing its unfinished goal by default.
+/// Corrections apply immediately; raw messages stay in history.
+pub(crate) fn followup_input(question: &str) -> String {
+    format!("진행 중인 대화에 사용자가 추가로 보낸 메시지입니다. 기존 질문의 목적과 아직 답하지 않은 부분을 유지하면서 이 메시지를 지금 반영하세요. 보충 질문은 기존 답변에 함께 다루고, 정정·조건·설명 방식 변경은 이어지는 답변에 바로 적용하세요. 사용자가 기존 요청을 명시적으로 취소하거나 다른 요청으로 바꾸는 경우에만 그 의도에 따라 방향을 바꾸세요. 이미 전달한 내용을 불필요하게 반복하지 말고 이어서 답하세요.\n\n사용자 추가 메시지:\n{question}")
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatExchange {
@@ -69,22 +75,30 @@ pub struct ChatPlan {
 }
 impl ChatPlan {
     pub fn payload(&self, request: &ChatRequest, model: &str, effort: &str) -> Value {
-        let mut bounded = Vec::new();
-        let mut size = 0;
-        for item in self.history.iter().rev().take(20) {
-            size += item.question.len()
-                + item.answer.len()
-                + item.followups.iter().map(String::len).sum::<usize>();
-            if size > 100000 {
-                break;
-            }
-            bounded.push(item.clone());
-        }
-        bounded.reverse();
-        let mut payload = request.payload(&bounded, model, effort);
+        self.payload_with_memory(request, model, effort, None)
+    }
+    pub fn payload_with_memory(&self, request: &ChatRequest, model: &str, effort: &str, memory: Option<&crate::chat_memory::ChatMemory>) -> Value {
+        use crate::chat_memory::{bounded_text, history_input};
+        // A summary is valid only on this exact ancestor path (also covers edited questions).
+        let memory = memory.filter(|m|self.history.iter().any(|r|r.id == m.through_exchange_id));
+        let (history, omitted) = history_input(&self.history, memory);
+        let mut payload = request.payload(&[], model, effort);
         let mut input: Value = serde_json::from_str(payload["input"].as_str().unwrap()).unwrap();
         input["question"] = json!(self.question);
-        input["additional_questions"] = json!(self.initial_followups);
+        let mut followup_budget = 24_000;
+        let mut followups = Vec::new();
+        for question in self.initial_followups.iter().rev() {
+            if question.len() > followup_budget { break; }
+            followup_budget -= question.len(); followups.push(question);
+        }
+        followups.reverse();
+        input["additional_questions"] = json!(followups);
+        input["previous_conversation"] = json!(history);
+        input["older_conversation_memory"] = json!(memory);
+        input["context_omitted"] = json!(omitted || followups.len() < self.initial_followups.len() || request.context.len() > 80_000);
+        input["paper_excerpts"] = json!(bounded_text(&request.context, 80_000));
+        let instructions = payload["instructions"].as_str().unwrap().to_owned();
+        payload["instructions"] = json!(format!("{instructions} older_conversation_memory는 오래된 대화의 요약이며 논문 근거 자체가 아닙니다. important_user_notes는 사용자의 정확한 정정·조건 인용입니다. 최근 사용자 정정을 우선하고, 논문 사실·수식은 paper_excerpts 원문으로 확인하세요. context_omitted가 true이면 일부 입력이 생략되었습니다. 없는 이전 내용을 기억하는 척하지 말고 필요한 문맥을 물어보세요."));
         payload["input"] = json!(input.to_string());
         payload["initialFollowupCount"] = json!(self.initial_followups.len());
         payload

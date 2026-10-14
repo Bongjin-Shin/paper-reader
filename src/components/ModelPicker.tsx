@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { errorMessage, getChatgptModels, getClaudeModels, getModelPreferences, setModelPreference } from '../lib/backend';
 import type { ModelInfo } from '../types';
+import { UpwardSelect, type SelectOption } from './UpwardSelect';
 
-export function ModelPicker({ scope, disabled = false, provider = 'chatgpt' }: { scope: 'translation' | 'chat'; disabled?: boolean; provider?: 'chatgpt' | 'claude' }) {
+export function ModelPicker({ scope, disabled = false, provider = 'chatgpt', compact = false }: { scope: 'translation' | 'chat'; disabled?: boolean; provider?: 'chatgpt' | 'claude'; compact?: boolean }) {
   const [models, setModels] = useState<ModelInfo[]>([]), [model, setModel] = useState(''), [effort, setEffort] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [revision, refresh] = useState(0);
   useEffect(() => { if (provider !== 'claude') return; const update = () => refresh(n => n + 1); window.addEventListener('claude-connection-changed', update); return () => window.removeEventListener('claude-connection-changed', update); }, [provider]);
@@ -23,21 +24,31 @@ export function ModelPicker({ scope, disabled = false, provider = 'chatgpt' }: {
     try { await setModelPreference(scope, next, nextEffort, provider); setModel(next); setEffort(nextEffort); }
     catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
-  return <div className="model-picker">
-    <label>{label}<select aria-label={label} value={model} disabled={disabled || busy || !models.length}
-      onChange={e => void save(e.target.value, '')}>
-      {scope === 'chat' && <option value="">기본 모델{!model && selected ? ` · ${selected.displayName}` : ''}</option>}
-      {model && !models.some(m => m.model === model) && <option value={model}>{model} · 목록에 없음</option>}
-      {!model && scope === 'translation' && <option value="">모델 선택</option>}
-      {models.map(m => <option key={m.model} value={m.model}>{m.displayName}</option>)}
-    </select></label>
-    {<label>사고 수준 (effort)<select aria-label={`${scope === 'chat' ? '채팅' : '번역'} effort`} value={effort}
-      disabled={disabled || busy || !selected?.efforts.length} onChange={e => void save(model, e.target.value)}>
-      <option value="">{scope === 'chat' ? '기본값' : '자동 · 속도 우선'}{automaticEffort ? ` · ${automaticEffort}` : ''}</option>
-      {effort && !selected?.efforts.includes(effort) && <option value={effort}>{effort} · 재선택 필요</option>}
-      {selected?.efforts.map(value => <option key={value} value={value}>{value}</option>)}
-    </select></label>}
-    <button className="model-refresh" disabled={disabled || busy} onClick={() => refresh(n => n + 1)}>{busy ? '모델 확인 중…' : '모델 목록 새로고침'}</button>
+  const modelOptions: SelectOption[] = [
+    ...(scope === 'chat' ? [{ value: '', label: `기본 모델${!model && selected ? ` · ${selected.displayName}` : ''}` }] : []),
+    ...(model && !models.some(m => m.model === model) ? [{ value: model, label: `${model} · 목록에 없음` }] : []),
+    ...(!model && scope === 'translation' ? [{ value: '', label: '모델 선택' }] : []),
+    ...models.map(m => ({ value: m.model, label: m.displayName })),
+  ];
+  const effortOptions: SelectOption[] = [
+    { value: '', label: `${scope === 'chat' ? '기본값' : '자동 · 속도 우선'}${automaticEffort ? ` · ${automaticEffort}` : ''}` },
+    ...(effort && !selected?.efforts.includes(effort) ? [{ value: effort, label: `${effort} · 재선택 필요` }] : []),
+    ...(selected?.efforts.map(value => ({ value, label: value })) ?? []),
+  ];
+  return <div className={`model-picker${compact ? ' model-picker-compact' : ''}`}>
+    <label><span>{label}</span><Picker upward={compact} label={label} title={selected?.displayName ?? label} value={model}
+      disabled={disabled || busy || !models.length} options={modelOptions} onChange={next => void save(next, '')} /></label>
+    <label><span>사고 수준 (effort)</span><Picker upward={compact} title="사고 수준 (effort)" label={`${scope === 'chat' ? '채팅' : '번역'} effort`} value={effort}
+      disabled={disabled || busy || !selected?.efforts.length} options={effortOptions} onChange={next => void save(model, next)} /></label>
+    <button type="button" className="model-refresh" aria-label="모델 목록 새로고침" title={busy ? '모델 확인 중…' : '모델 목록 새로고침'} disabled={disabled || busy} onClick={() => refresh(n => n + 1)}>{compact ? '↻' : busy ? '모델 확인 중…' : '모델 목록 새로고침'}</button>
     {error && <p role="alert">{error}</p>}
   </div>;
+}
+
+function Picker({ upward, ...props }: Parameters<typeof UpwardSelect>[0] & { upward: boolean }) {
+  if (upward) return <UpwardSelect {...props} />;
+  return <select aria-label={props.label} title={props.title} value={props.value} disabled={props.disabled}
+    onChange={event => props.onChange(event.target.value)}>
+    {props.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+  </select>;
 }

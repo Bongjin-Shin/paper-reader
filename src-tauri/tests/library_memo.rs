@@ -33,7 +33,7 @@ fn version_seven_migration_preserves_data_and_memos_survive_reopen_move_and_reim
         connection
             .query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        15
+        16
     );
     let old = &db.library().unwrap().papers[0];
     assert_eq!(old.memo, "");

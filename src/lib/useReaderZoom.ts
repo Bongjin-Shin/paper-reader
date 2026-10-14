@@ -136,6 +136,7 @@ export function useReaderZoom(reader: RefObject<HTMLElement | null>, pdf: PDFDoc
 
   const cancelWheel = () => { cancelAnimationFrame(wheelFrame.current); wheelFrame.current = 0; pendingWheel.current = null; };
   return { scale, renderScale, renderRevision, fitting, zooming, scaleRef,
+    reset: () => { cancelWheel(); fittingRef.current = false; setFitting(false); apply(1); },
     step: (direction: number) => { const next = (pendingWheel.current?.scale ?? scaleRef.current) + direction * .25; cancelWheel(); fittingRef.current = false; setFitting(false); apply(next); },
     fitWidth: () => { cancelWheel(); fittingRef.current = true; setFitting(true); fit(); } };
 }

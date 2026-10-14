@@ -391,7 +391,7 @@ async fn legacy_layout_cache_is_kept_but_not_reused_until_an_explicit_translatio
     assert_eq!(
         sql.query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        15
+        16
     );
     translate_page(&db, &request(), || async {
         Ok(response(AiProvider::Chatgpt))

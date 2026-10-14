@@ -19,7 +19,7 @@ export function readPaperText(pdf: PDFDocumentProxy) {
 }
 
 /** Prefer the reading position and matching passages; preserve page labels and omissions. */
-export function paperContext(pages: PaperPageText[], question: string, current: number, budget = 110000) {
+export function paperContext(pages: PaperPageText[], question: string, current: number, budget = 80000) {
   const terms = [...new Set(question.toLocaleLowerCase().match(/[\p{L}\p{N}]{2,}/gu) ?? [])];
   const chunks = pages.flatMap(page => {
     const result: { page: number; start: number; text: string; score: number }[] = [];
@@ -31,10 +31,12 @@ export function paperContext(pages: PaperPageText[], question: string, current: 
     }
     return result;
   });
-  const chosen: typeof chunks = []; let size = 0;
+  const chosen: typeof chunks = []; let size = 300;
+  const encoder = new TextEncoder();
   for (const chunk of [...chunks].sort((a, b) => b.score - a.score || a.page - b.page || a.start - b.start)) {
-    if (size + chunk.text.length + 60 > budget) continue;
-    chosen.push(chunk); size += chunk.text.length + 60;
+    const bytes = encoder.encode(chunk.text).length + 100;
+    if (size + bytes > budget) continue;
+    chosen.push(chunk); size += bytes;
   }
   if (!chosen.length) throw new Error('선택 가능한 논문 텍스트가 없습니다. 이미지 PDF의 OCR은 지원하지 않습니다.');
   const omitted = chosen.length < chunks.length;

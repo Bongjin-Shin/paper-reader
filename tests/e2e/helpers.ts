@@ -150,7 +150,9 @@ export async function installBackend(page: Page, options = { delay: 0, fail: fal
         if (command === 'steer_paper_chat') {
           const live = (state as any).__liveChat;
           if (!live || live.id !== args.requestId || (state as any).__steerFail) throw new Error('추가 질문을 반영하지 못했습니다.');
-          live.followups.push(args.question); live.emit({ type: 'accepted', question: args.question }); return;
+          live.followups.push(args.question); live.emit({ type: 'accepted', question: args.question });
+          if ((state as any).__holdSteer) await new Promise<void>(resolve => { (state as any).__finishSteer = resolve; });
+          return;
         }
         if (command === 'stop_paper_chat') {
           const live = (state as any).__liveChat;
@@ -169,6 +171,7 @@ export async function installBackend(page: Page, options = { delay: 0, fail: fal
           const emit = (message: any) => callbacks.get(args.onProgress.id)?.({ index: index++, message });
           const live = { id: args.requestId, emit, followups: [] as string[], interrupted: false, finish: null as (() => void) | null };
           (state as any).__liveChat = live;
+          if ((state as any).__chatReadyDelay) await new Promise(resolve => setTimeout(resolve, (state as any).__chatReadyDelay));
           emit({ type: 'ready' }); emit({ type: 'thinking' });
           const text = (state as any).__chatMarkdown ?? '논문에서는 복잡도를 분석합니다. [p. 2]';
           if ((state as any).__chatStreaming) emit({ type: 'answer', text });
@@ -441,4 +444,13 @@ export async function select(page: Page, word = 'asymptotic', occurrence = 0, pa
   const box = await wordBox(page, word, occurrence, pageNumber);
   await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.getByRole('dialog', { name: `${word} 단어 도구`, exact: true }).filter({ has: page.getByRole('button', { name: '번역', exact: true }) })).toBeVisible();
+}
+
+// Exercise the same upward menu interaction as the user (including portal options).
+export async function chooseChatOption(page: Page, label: string, option: string) {
+  const control = page.getByRole('combobox', { name: label, exact: true });
+  await expect(control).toBeEnabled();
+  await control.click();
+  await page.getByRole('listbox', { name: label, exact: true }).getByRole('option', { name: option, exact: true }).click();
+  await expect(control).toHaveAttribute('aria-expanded', 'false');
 }

@@ -170,10 +170,31 @@ async fn ask_paper(
                 db.prepare_chat(&request, edit.as_ref())?,
             )
         };
-        let payload = plan.payload(&request, &preferences.chat_model, &preferences.chat_effort);
-        let progress = |event| {
-            let _ = on_progress.send(event);
-        };
+        let progress = |event| { let _ = on_progress.send(event); };
+        let mut memory = state.db.lock().map_err(|_| "데이터베이스 잠금 오류")?
+            .chat_memory(&request.paper_id, &plan.history)?;
+        let mut summary_failed = false;
+        // No database lock is held across model calls. Failed summaries never discard chat.
+        while let Some(work) = crate::chat_memory::summary_work(&plan.history, memory.as_ref()) {
+            progress(codex::ChatEvent::Context { message: "이전 대화를 요약해 문맥을 정리하는 중…".into() });
+            let payload = work.payload(&preferences.chat_model);
+            let result = if provider == AiProvider::Claude { state.claude.lookup(payload) } else { state.codex.lookup(payload) };
+            match result.and_then(|result|work.accept(&result.text)) {
+                Ok(next) => {
+                    // The summary is a disposable cache; a cache write failure must not lose an answer.
+                    if let Ok(db) = state.db.lock() { let _ = db.save_chat_memory(&request.paper_id, &next); }
+                    memory = Some(next);
+                }
+                Err(_) => { summary_failed = true; break; }
+            }
+        }
+        let (_, omitted) = crate::chat_memory::history_input(&plan.history, memory.as_ref());
+        if summary_failed || omitted {
+            progress(codex::ChatEvent::Context { message: "일부 긴 대화는 이번 답변의 문맥에서 생략됩니다. 저장된 원본 기록은 유지됩니다.".into() });
+        } else if memory.is_some() {
+            progress(codex::ChatEvent::Context { message: "이전 대화 요약과 최근 대화 원문을 함께 참고합니다.".into() });
+        }
+        let payload = plan.payload_with_memory(&request, &preferences.chat_model, &preferences.chat_effort, memory.as_ref());
         let answer = if provider == AiProvider::Claude {
             state.claude.chat(&request_id, payload, progress)?
         } else {
