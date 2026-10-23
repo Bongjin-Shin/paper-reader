@@ -96,3 +96,29 @@ it('does not classify a body reference to Fig. 2 as a floating caption',()=>{
  const runs=[run('The network is shown in',320,100,10),run('Fig. 2. It can handle arbitrary inputs.',320,112,10),run('The model learns features.',320,124,10)];
  const lines=orderedLines(runs);expect(readingRegions(lines,runs,792).every(l=>l.kind!=='caption')).toBe(true);
 });
+
+it('recognizes headings without a dot but does not promote numbered full-width prose',()=>{
+ const runs=[run('5 Vacancy Chain Approach',30,40,12,{bold:true}),run('This section describes the method.',30,65),
+  run('3. In the UAV swarm saturation attack model proposed in this paper, the vessels are',30,90),
+  run('treated as stationary targets.',30,105)];
+ const blocks=textBlocks(orderedLines(runs),runs);
+ expect(blocks.filter(b=>b.kind==='heading').flatMap(b=>b.lines.flatMap(l=>l.runs))).toEqual([0]);
+ expect(blocks.at(-1)!.lines.flatMap(l=>l.runs)).toContain(3);
+});
+it('removes close manuscript gutter numbers without relying on a 1.5-em gap',()=>{
+ const runs=Array.from({length:7},(_,i)=>[run(String(121+i),30,100+i*28),run('Manuscript content continues here.',60,100+i*28)]).flat();
+ expect([...lineNumberRuns(runs)]).toEqual([0,2,4,6,8,10,12]);
+});
+it('keeps same-size running titles and manuscript date footers out of body continuations',()=>{
+ const runs=[run('Published as a conference paper at ICLR 2019',30,40),run('The unfinished sentence continues',30,690),
+  run('18 Vrachimis et al., May 24, 2022',30,756)];
+ const lines=readingRegions(orderedLines(runs),runs,792);
+ expect(lines.map(l=>l.kind)).toEqual(['header',undefined,'footer']);
+ expect(textBlocks(lines,runs).map(b=>b.kind)).toEqual(['header','paragraph','footer']);
+});
+it('recognizes an isolated unnumbered bold subheading without splitting a bold abstract',()=>{
+ const runs=[run('The prior paragraph ends.',30,100),run('Declaration of competing interest',30,130,12,{bold:true}),
+  run('The authors declare no competing interests.',30,160)];
+ const blocks=textBlocks(orderedLines(runs),runs);
+ expect(blocks.map(b=>b.kind)).toEqual(['paragraph','heading','paragraph']);
+});

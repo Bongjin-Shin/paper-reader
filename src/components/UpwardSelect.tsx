@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom';
 
 export type SelectOption = { value: string; label: string };
 type Props = {
-  label: string; title?: string; value: string; options: SelectOption[];
+  label: string; title?: string; placeholder?: string; value: string; options: SelectOption[];
   disabled?: boolean; onChange: (value: string) => void;
 };
 
 /** Native select popups choose their own direction in WebView. Keep these above the composer. */
-export function UpwardSelect({ label, title, value, options, disabled, onChange }: Props) {
+export function UpwardSelect({ label, title, placeholder, value, options, disabled, onChange }: Props) {
   const id = useId(), trigger = useRef<HTMLButtonElement>(null), menu = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false), [active, setActive] = useState(0);
   const [position, setPosition] = useState({ left: 0, bottom: 0, width: 220, maxHeight: 0 });
@@ -85,7 +85,7 @@ export function UpwardSelect({ label, title, value, options, disabled, onChange 
       aria-haspopup="listbox" aria-expanded={expanded} aria-controls={expanded ? id : undefined}
       aria-activedescendant={expanded ? `${id}-${active}` : undefined} onKeyDown={keydown}
       onClick={() => expanded ? setOpen(false) : show()}>
-      <span>{options[selected]?.label ?? label}</span><span className="upward-select-chevron" aria-hidden="true">⌃</span>
+      <span>{options[selected]?.label ?? placeholder ?? label}</span><span className="upward-select-chevron" aria-hidden="true">⌃</span>
     </button>
     {expanded && createPortal(<div ref={menu} id={id} role="listbox" aria-label={label} className="upward-select-menu"
       style={position} onPointerDown={event => event.preventDefault()}>

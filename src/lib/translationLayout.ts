@@ -5,6 +5,8 @@ import type { HorizontalRule } from './translationTables';
 export const mathFont = /(?:CMMI|CMSY|CMEX|MSAM|MSBM|MTMI|MTSY|MTEX|Math|Symbol|Euler)/i;
 const mathSign = /[=<>≤≥≼≽≺≻≠≈≡±×÷∈∉∋⊂⊃⊆⊇∪∩∑∏∫√∞∂∇∅⋃⋂]/u;
 const mathPart = /^(?:[\p{L}\d]{1,2}|sin|cos|tan|log|ln|exp|lim|arg|min|max|loc|abs|Softmax|Concat|MHA|Attention|if|otherwise|update|s\.t\.)[\s\d\p{P}\p{S}]*$/u;
+const spacedHeading = /^(?:[A-Z]\s+){3,}[A-Z]$/;
+const numberedHeading = /^(?:\d+(?:\.\d+)*\.?|[IVXLCDM]+\.|[A-Z]\.)\s+[A-Z]/;
 export const runSize = (r: TextRun) => r.fontSize ?? r.bottom - r.top;
 /** Symbol fonts can report oversized selection boxes, especially accents and
  * extensible operators. Stop inline crops before adjacent prose's actual ink. */
@@ -28,13 +30,16 @@ export function lineSize(line: Line, runs: TextRun[]) {
 export function isHeading(line: Line, runs: TextRun[], bodySize: number) {
   const text = line.runs.map(i => runs[i].text).join(' ').trim();
   const words = text.match(/[A-Za-z]+/g) ?? [];
+  const prose = line.runs.map(i => runs[i]).filter(r => /[A-Za-z]{2}/.test(r.text));
+  const styled = prose.length > 0 && prose.every(r => r.bold || r.italic);
   // Entire abstracts are often bold. Weight alone cannot distinguish a heading
   // from prose, and punctuation on the final wrapped line must not change kind.
   return words.length > 0 && words.length < 18 && !/[.!?;:]$/.test(text)
     && !mathSign.test(text) && (lineSize(line, runs) > bodySize * 1.12
       || /^(?:(?:\d+(?:\.\d+)*\.?|[IVXLCDM]+\.|[A-Z]\.)\s+)?(?:abstract|introduction|background|related work|materials and methods|methodology|methods?|results?(?: and discussion)?|discussion|conclusions?|references|acknowledg(?:e)?ments?|appendix)$/i.test(text)
+      || spacedHeading.test(text)
       || (words.length <= 10 && text === text.toUpperCase() && line.runs.some(i => runs[i].bold))
-      || /^(?:\d+(?:\.\d+)+|\d+\.|[IVXLCDM]+\.|[A-Z]\.)\s+[A-Z]/.test(text));
+      || (numberedHeading.test(text) && (styled || words.length <= 8)));
 }
 
 /** Reviewer manuscript line numbers are a narrow, sequential gutter beside prose. */
@@ -43,7 +48,7 @@ export function lineNumberRuns(runs: TextRun[]): Set<number> {
   const result = new Set<number>();
   for (const { r: seed } of candidates) {
     const size = runSize(seed), group = candidates.filter(({ r }) => Math.abs(r.right - seed.right) < size * .8
-      && runs.some(other => other !== r && other.left - r.right > size * 1.5 && other.left - r.right < size * 8
+      && runs.some(other => other !== r && other.left - r.right > size * .8 && other.left - r.right < size * 8
         && Math.abs((other.baseline ?? other.bottom) - (r.baseline ?? r.bottom)) < size * .4 && /[A-Za-z]{4}/.test(other.text)));
     group.sort((a, b) => a.r.top - b.r.top);
     if (group.length < 5 || group.slice(1).filter(({ r }, i) => Number(r.text) === Number(group[i].r.text) + 1).length < (group.length - 1) * .8) continue;
@@ -110,6 +115,13 @@ export function textBlocks(lines: Line[], runs: TextRun[]): TextBlock[] {
     const prior = blocks.at(-1), previous = prior?.lines.at(-1);
     const text = line.runs.map(i=>runs[i].text).join(' ').trim();
     let kind: TextBlock['kind'] = line.kind ?? (isEquation(line,runs) ? 'equation' : isHeading(line,runs,body) ? 'heading' : 'paragraph');
+    const next = lines[lineIndex+1];
+    if (!line.kind && kind === 'paragraph' && (text.match(/[A-Za-z]+/g)?.length ?? 99) <= 10
+      && /[A-Za-z]{2}/.test(text)
+      && !/[.!?;:]$/.test(text) && !mathSign.test(text)
+      && line.runs.filter(i => /[A-Za-z]{2}/.test(runs[i].text)).every(i => runs[i].bold || runs[i].italic)
+      && (!previous || previous.column !== line.column || line.top-previous.bottom > body*.5)
+      && (!next || next.column !== line.column || next.top-line.bottom > body*.5)) kind='heading';
     if (!line.kind && lineIndex === 0 && lines[1] && lines[1].top-line.bottom>body*2 && !/[.!?]$/.test(text)) kind='heading';
     if (/^\(\d+[a-z]?\)$/.test(text) && prior?.kind === 'equation' && previous && line.top - previous.bottom < body * 2) kind = 'equation';
     const priorText = previous?.runs.map(i=>runs[i].text).join(' ').trim() ?? '';
@@ -117,15 +129,17 @@ export function textBlocks(lines: Line[], runs: TextRun[]): TextBlock[] {
     const size = lineSize(line,runs), prevSize = previous ? lineSize(previous,runs) : size;
     const gap = previous ? line.top - previous.bottom : 0;
     const differentColumn = previous && line.column !== previous.column;
-    const continuesColumn = previous?.column === 1 && line.column === 2 && !terminal;
+    const sameGroup = line.columnGroup === previous?.columnGroup;
+    const continuesColumn = sameGroup && previous?.column === 1 && line.column === 2 && !terminal;
     // Typography/caption-like text in the middle of unfinished prose is not a
     // new heading. Keep the sentence intact across that line boundary as well.
     if (kind==='heading' && prior?.kind==='paragraph' && !terminal && !/[:;]$/.test(priorText)
+      && !spacedHeading.test(text) && !numberedHeading.test(text)
       && !/^(?:(?:\d+(?:\.\d+)*\.?|[IVXLCDM]+\.|[A-Z]\.)\s+)?(?:abstract|introduction|background|related work|materials and methods|methodology|methods?|results?(?: and discussion)?|discussion|conclusions?|references|acknowledg(?:e)?ments?|appendix)$/i.test(text)
       && (!differentColumn || continuesColumn) && gap<body*1.5 && Math.abs(size-prevSize)<body*.2) kind='paragraph';
-    const headingContinuation = !/^(?:[IVXLCDM]+\.|[A-Z]\.|\d+(?:\.\d+)*\.)\s/.test(text) && kind === 'heading' && prior?.kind === 'heading' && gap < body && Math.abs(size-prevSize) < body * .2;
+    const headingContinuation = !differentColumn && sameGroup && !/^(?:[IVXLCDM]+\.|[A-Z]\.|\d+(?:\.\d+)*\.)\s/.test(text) && kind === 'heading' && prior?.kind === 'heading' && gap < body && Math.abs(size-prevSize) < body * .2;
     const paragraphBreak = kind === 'paragraph' && terminal && (gap > body * .6 || (previous && line.left - previous.left > body * .6));
-    const split = !prior || !previous || kind !== prior.kind || line.region !== previous.region
+    const split = !prior || !previous || !sameGroup || kind !== prior.kind || line.region !== previous.region
       || (kind === 'heading' && !headingContinuation)
       || (differentColumn && (kind === 'equation' || !continuesColumn) && !headingContinuation)
       || (kind === 'equation' && gap > body * 2)

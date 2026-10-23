@@ -36,7 +36,15 @@ export function extractTables(runs: TextRun[], rules: HorizontalRule[]) {
     const aligned = rules.filter(r => r.top >= top.top && Math.abs(r.left-top.left) < size && Math.abs(r.right-top.right) < size).sort((a,b) => a.top-b.top);
     const borders = [aligned[0]];
     for (const rule of aligned.slice(1)) {
-      if (rule.top - borders.at(-1)!.top > size * 12) break;
+      if (rule.top - borders.at(-1)!.top > size * 12) {
+        // A long table can have many rows between the header separator and
+        // bottom rule. Dense short cells/numbers distinguish it from prose.
+        const cells = runs.filter(r => r.left >= top.left-size && r.right <= top.right+size
+          && r.top > borders.at(-1)!.top && r.bottom < rule.top+size);
+        if (borders.length !== 2 || rule.top - borders.at(-1)!.top > size * 60
+          || cells.filter(r => /^\s*[\d.+−-]+\s*$/.test(r.text)).length < 4
+          || cells.some(r => r.text.length > 100)) break;
+      }
       if (rule.top - borders.at(-1)!.top > 1) borders.push(rule);
     }
     if (borders.length < 2) continue;

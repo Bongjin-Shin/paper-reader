@@ -2,6 +2,7 @@ import type { ChatEdit, ChatExchange, ChatSelection } from '../types';
 import { askPaper, errorMessage, getPaperChat, readPdf, selectChatBranch, steerPaperChat, stopPaperChat } from './backend';
 import { loadPdf } from './pdf';
 import { paperContext, readPaperText, type PaperPageText } from './paperContext';
+import { TextEditHistory } from './textEditHistory';
 
 type QueuedQuestion = { id: string; text: string; pageNumber: number };
 type Editing = ChatEdit & { text: string };
@@ -17,6 +18,7 @@ const emptyPending = () => ({ question: '', answer: '', followups: [] as string[
 
 /** Own requests independently of mounted panels. Navigating never cancels a conversation. */
 export class PaperChatSession {
+  readonly questionHistory = new TextEditHistory();
   private state: ChatState = { messages: [], question: '', selection: null, loading: true, phase: '', error: '', contextNotice: '',
     pending: emptyPending(), editing: null, editPending: null, ready: false, controlling: false, stopping: false,
     queue: [], sendingQueued: null, usageRevision: 0 };

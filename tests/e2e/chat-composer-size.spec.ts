@@ -1,0 +1,22 @@
+import { expect, test } from '@playwright/test';
+import { installBackend, open } from './helpers';
+test('composer grows with wrapped text, caps with scrolling, and shrinks after sending',async({page})=>{
+ await installBackend(page);await open(page);await page.getByRole('button',{name:'논문 채팅',exact:true}).click();
+ const input=page.getByLabel('논문 질문');
+ const height=()=>input.evaluate(el=>el.getBoundingClientRect().height);
+ const initial=await height();
+ await input.fill('질문을 길게 입력했을 때 입력창 높이도 늘어나야 합니다. '.repeat(4));
+ await expect.poll(height).toBeGreaterThan(initial);
+ await input.fill('아주 긴 질문입니다. 줄 바꿈과 자동 줄 바꿈 모두 유지합니다.\n'.repeat(50));
+ await expect.poll(height).toBeLessThanOrEqual(260);
+ expect(await input.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+ await input.evaluate(el=>{el.scrollTop=0;});
+ const box=(await input.boundingBox())!;await page.mouse.move(box.x+20,box.y+30);await page.mouse.wheel(0,180);
+ await expect.poll(()=>input.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+ await expect(page.getByRole('button',{name:'질문 보내기',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'구독 사용량 새로고침'})).not.toHaveAttribute('title');
+ await page.screenshot({path:'.tools/library-translation-audit-qa/chat-composer.png'});
+ await page.getByRole('button',{name:'질문 보내기',exact:true}).click();
+ await expect(input).toHaveValue('');await expect.poll(height).toBeCloseTo(initial,0);
+ await input.fill('짧은 질문');await expect.poll(height).toBeCloseTo(initial,0);
+});

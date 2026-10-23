@@ -52,5 +52,5 @@ test('model and effort live below the composer; changing them or refreshing neve
   const composer = page.locator('.chat-composer');
   expect(await composer.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await expect(page.getByRole('button', { name: '질문 보내기', exact: true })).toBeVisible();
-  await expect(page.getByLabel('앱 버전')).toHaveText('v0.1.1');
+  await expect(page.getByLabel('앱 버전')).toHaveText('v0.1.2');
 });

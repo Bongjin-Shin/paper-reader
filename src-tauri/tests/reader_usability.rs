@@ -205,7 +205,7 @@ fn migration_from_phase_one_preserves_existing_papers_words_and_coordinates() {
         connection
             .query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        16
+        17
     );
     assert_eq!(db.vocabulary("", None).unwrap()[0].lookup_count, 1);
 }

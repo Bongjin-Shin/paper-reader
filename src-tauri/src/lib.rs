@@ -13,6 +13,7 @@ pub mod lookup;
 pub mod models;
 pub mod page_translation;
 pub mod papers;
+mod pdf_identity;
 pub mod usage;
 
 #[cfg(target_os = "linux")]

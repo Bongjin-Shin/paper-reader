@@ -17,29 +17,37 @@ export function ModelPicker({ scope, disabled = false, provider = 'chatgpt', com
     }).catch(e => { if (live) setError(errorMessage(e)); }).finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
   }, [scope, revision, provider]);
-  const selected = models.find(m => m.model === model) ?? (!model ? models.find(m => m.isDefault) ?? models[0] : undefined);
+  const selectableModels = scope === 'chat' ? models.filter(m => m.model && m.model !== 'default') : models;
+  const automaticModel = models.find(m => m.isDefault) ?? models[0];
+  const automaticSelection = !model || (scope === 'chat' && model === 'default');
+  const selected = selectableModels.find(m => m.model === model)
+    ?? (automaticSelection ? selectableModels.find(m => m.model === automaticModel?.model) : undefined);
   const automaticEffort = scope === 'chat' ? selected?.defaultEffort : ['none', 'minimal', 'low'].find(e => selected?.efforts.includes(e)) ?? selected?.defaultEffort;
+  // Keep old automatic preferences compatible without showing an automatic choice.
+  // If the provider does not identify its default, invite a selection instead of guessing.
+  const shownModel = scope === 'chat' && automaticSelection ? selected?.model ?? '' : model;
+  const shownEffort = !effort && selected?.efforts.includes(automaticEffort ?? '') ? automaticEffort! : effort;
   const save = async (next: string, nextEffort: string) => {
     setBusy(true); setError('');
     try { await setModelPreference(scope, next, nextEffort, provider); setModel(next); setEffort(nextEffort); }
     catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
   const modelOptions: SelectOption[] = [
-    ...(scope === 'chat' ? [{ value: '', label: `기본 모델${!model && selected ? ` · ${selected.displayName}` : ''}` }] : []),
-    ...(model && !models.some(m => m.model === model) ? [{ value: model, label: `${model} · 목록에 없음` }] : []),
+    ...(model && !automaticSelection && !selectableModels.some(m => m.model === model) ? [{ value: model, label: `${model} · 목록에 없음` }] : []),
     ...(!model && scope === 'translation' ? [{ value: '', label: '모델 선택' }] : []),
-    ...models.map(m => ({ value: m.model, label: m.displayName })),
+    ...selectableModels.map(m => ({ value: m.model, label: m.displayName })),
   ];
   const effortOptions: SelectOption[] = [
-    { value: '', label: `${scope === 'chat' ? '기본값' : '자동 · 속도 우선'}${automaticEffort ? ` · ${automaticEffort}` : ''}` },
     ...(effort && !selected?.efforts.includes(effort) ? [{ value: effort, label: `${effort} · 재선택 필요` }] : []),
     ...(selected?.efforts.map(value => ({ value, label: value })) ?? []),
   ];
   return <div className={`model-picker${compact ? ' model-picker-compact' : ''}`}>
-    <label><span>{label}</span><Picker upward={compact} label={label} title={selected?.displayName ?? label} value={model}
-      disabled={disabled || busy || !models.length} options={modelOptions} onChange={next => void save(next, '')} /></label>
-    <label><span>사고 수준 (effort)</span><Picker upward={compact} title="사고 수준 (effort)" label={`${scope === 'chat' ? '채팅' : '번역'} effort`} value={effort}
-      disabled={disabled || busy || !selected?.efforts.length} options={effortOptions} onChange={next => void save(model, next)} /></label>
+    <label><span>{label}</span><Picker upward={compact} label={label} placeholder="모델 선택" title={selected?.displayName ?? label} value={shownModel}
+      disabled={disabled || busy || !selectableModels.length} options={modelOptions}
+      onChange={next => void save(next, scope === 'chat' ? selectableModels.find(m => m.model === next)?.defaultEffort ?? '' : '')} /></label>
+    <label><span>사고 수준 (effort)</span><Picker upward={compact} title="사고 수준 (effort)" label={`${scope === 'chat' ? '채팅' : '번역'} effort`} value={shownEffort}
+      placeholder={selected && !selected.efforts.length ? '지원 안 함' : 'effort 선택'}
+      disabled={disabled || busy || !selected?.efforts.length} options={effortOptions} onChange={next => void save(shownModel || model, next)} /></label>
     <button type="button" className="model-refresh" aria-label="모델 목록 새로고침" title={busy ? '모델 확인 중…' : '모델 목록 새로고침'} disabled={disabled || busy} onClick={() => refresh(n => n + 1)}>{compact ? '↻' : busy ? '모델 확인 중…' : '모델 목록 새로고침'}</button>
     {error && <p role="alert">{error}</p>}
   </div>;
@@ -49,6 +57,7 @@ function Picker({ upward, ...props }: Parameters<typeof UpwardSelect>[0] & { upw
   if (upward) return <UpwardSelect {...props} />;
   return <select aria-label={props.label} title={props.title} value={props.value} disabled={props.disabled}
     onChange={event => props.onChange(event.target.value)}>
+    {!props.options.some(option => option.value === props.value) && <option value="" disabled>{props.placeholder}</option>}
     {props.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select>;
 }

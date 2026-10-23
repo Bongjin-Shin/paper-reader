@@ -58,7 +58,7 @@ fn validate_metadata(value: &PaperMetadata) -> Result<(), String> {
     let day: u32 = parts.get(2).unwrap_or(&"01").parse().unwrap_or(0);
     let days = match month {
         4 | 6 | 9 | 11 => 30,
-        2 if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) => 29,
+        2 if year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400)) => 29,
         2 => 28,
         _ => 31,
     };

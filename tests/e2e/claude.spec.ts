@@ -22,7 +22,7 @@ test('Claude translation and chat have independent providers, models and effort 
   await page.getByLabel('논문 질문').fill('실험을 설명해줘'); await page.getByRole('button',{name:'질문 보내기',exact:true}).click();
   await expect(page.locator('.chat-exchange').last()).toContainText('opus[1m] · max');
   await chooseChatOption(page, '채팅 연결', 'ChatGPT');
-  await expect(page.getByLabel('채팅 모델',{exact:true})).toHaveAttribute('data-value', '');
+  await expect(page.getByLabel('채팅 모델',{exact:true})).toHaveAttribute('data-value', 'gpt-5.6-luna');
   await chooseChatOption(page, '채팅 연결', 'Claude');
   await expect(page.getByLabel('채팅 모델',{exact:true})).toHaveAttribute('data-value', 'opus[1m]');
   await page.reload(); await open(page); await page.getByRole('button',{name:'논문 채팅',exact:true}).click();

@@ -5,9 +5,10 @@ import { readingRegions } from './translationRegions';
 import { rectToPdf } from './selection';
 import { hasUnmappedGlyph, pdfGlyphMappings, repairGlyphText } from './pdfGlyphs';
 import { extractTables, tableRules } from './translationTables';
+import { algorithmRuns } from './translationAlgorithms';
 
 export interface TextRun { text: string; left: number; top: number; right: number; bottom: number; baseline?: number; fontSize?: number; inkTop?: number; inkBottom?: number; math?: boolean; bold?: boolean; italic?: boolean }
-export interface Line { runs: number[]; left: number; top: number; right: number; bottom: number; column: number; kind?: NonNullable<SourceSentence['layout']>['kind']; region?: number }
+export interface Line { runs: number[]; left: number; top: number; right: number; bottom: number; column: number; columnGroup?: number; kind?: NonNullable<SourceSentence['layout']>['kind']; region?: number }
 const median = (values: number[]) => { const sorted = [...values].sort((a, b) => a - b); return sorted[Math.floor(sorted.length / 2)] ?? 0; };
 
 /** Find repeated whitespace BETWEEN columns before joining font runs into lines.
@@ -82,51 +83,79 @@ export function orderedLines(runs: TextRun[]): Line[] {
   rows.sort((a, b) => a.top - b.top);
   for (const row of rows) row.runs.sort((a, b) => runs[a].left - runs[b].left);
   const min = Math.min(...runs.map(r => r.left)), max = Math.max(...runs.map(r => r.right)), width = max - min;
-  const gaps = rows.flatMap(row => row.runs.slice(1).flatMap((id, index) => {
+  const gaps = [...new Set(rows.flatMap(row => row.runs.slice(1).flatMap((id, index) => {
     const left = runs[row.runs[index]].right, right = runs[id].left;
-    return right - left >= height * .8 && (left + right) / 2 > min + width * .25 && (left + right) / 2 < max - width * .25
+    return right - left >= height * .8 && (left + right) / 2 > min + width * .15 && (left + right) / 2 < max - width * .15
       ? [(left + right) / 2] : [];
-  }));
-  let split = 0, best = 1.5;
-  for (const x of gaps) {
+  })))];
+  const score = (section: Line[], x: number, size: number) => {
     let pairs = 0, crossing = 0;
-    for (const row of rows) {
+    for (const row of section) {
       if (row.runs.some(i => runs[i].left < x && runs[i].right > x)) { crossing++; continue; }
       const left = row.runs.filter(i => runs[i].right <= x), right = row.runs.filter(i => runs[i].left >= x);
-      const prose = (ids:number[]) => ids.some(i=>!runs[i].math && (runs[i].fontSize ?? height)>=height*.83
+      const prose = (ids:number[]) => ids.some(i=>!runs[i].math && (runs[i].fontSize ?? size)>=size*.83
         && /[A-Za-z]{3}/.test(runs[i].text) && !/[=<>≤≥∑]/.test(runs[i].text));
       if (left.length && right.length && x - runs[left[0]].left > width * .15 && runs[right.at(-1)!].right - x > width * .15
-        && runs[right[0]].left - runs[left.at(-1)!].right >= height * .8 && prose(left) && prose(right)) pairs++;
+        && runs[right[0]].left - runs[left.at(-1)!].right >= size * .8 && prose(left) && prose(right)) pairs++;
     }
     // Floating figures can leave too few coincident baselines to prove a gutter.
     // Repeated column starts also establish it when each side has several prose
     // lines, even if the caption uses a smaller font or different line spacing.
-    const starts = (side: 'left' | 'right') => rows.filter(row => !row.runs.some(i => runs[i].left < x && runs[i].right > x))
+    const starts = (side: 'left' | 'right') => section.filter(row => !row.runs.some(i => runs[i].left < x && runs[i].right > x))
       .map(row => row.runs.filter(i => side === 'left' ? runs[i].right <= x : runs[i].left >= x))
-      .filter(ids => ids.some(i => !runs[i].math && (runs[i].fontSize ?? height) >= height * .83 && /[A-Za-z]{4}/.test(runs[i].text)))
+      .filter(ids => ids.some(i => !runs[i].math && (runs[i].fontSize ?? size) >= size * .83 && /[A-Za-z]{4}/.test(runs[i].text)))
       .map(ids => runs[ids[0]].left);
-    const aligned = (xs: number[]) => Math.max(0, ...xs.map(start => xs.filter(v => Math.abs(v-start) < height * 1.5).length));
+    const aligned = (xs: number[]) => Math.max(0, ...xs.map(start => xs.filter(v => Math.abs(v-start) < size * 1.5).length));
     const support = pairs >= 2 ? pairs : Math.min(aligned(starts('left')), aligned(starts('right')));
-    const score = (pairs >= 2 ? pairs : support >= 3 ? support * .6 : 0) - crossing * .08;
-    if (score > best) { best = score; split = x; }
+    return (pairs >= 2 ? pairs : support >= 3 ? support * .6 : 0) - crossing * .08;
+  };
+  const findSplit = (section: Line[], preferred = 0) => {
+    const size = median(section.flatMap(row => row.runs).filter(i => !runs[i].math && runs[i].text.length > 3)
+      .map(i => runs[i].fontSize ?? runs[i].bottom - runs[i].top)) || height;
+    let split = preferred, best = preferred ? Math.max(1.5, score(section, preferred, size)) : 1.5;
+    for (const x of gaps) {
+      const candidate = score(section, x, size);
+      if (candidate > best) { best = candidate; split = x; }
+    }
+    return split;
+  };
+  const dominant = findSplit(rows);
+  // A publisher's narrow metadata column can sit beside a wide abstract above
+  // the ordinary body columns. Detect gutters within vertically separated
+  // sections too; one page-wide split otherwise joins keywords into the abstract.
+  const sections: Line[][] = [];
+  let bottom = -Infinity;
+  for (const row of rows) {
+    if (!sections.length || row.top - bottom > height * 2) sections.push([]);
+    sections.at(-1)!.push(row);
+    bottom = Math.max(bottom, row.bottom);
   }
-  if (!split) return rows;
   const result: Line[] = [], band: Line[] = [];
   const flush = () => { result.push(...band.filter(l => l.column === 1), ...band.filter(l => l.column === 2)); band.length = 0; };
-  for (const [rowIndex, row] of rows.entries()) {
-    const left = row.runs.filter(i => runs[i].right <= split), right = row.runs.filter(i => runs[i].left >= split);
-    const previous = result.at(-1), rowHeight = row.bottom - row.top;
-    // A wrapped full-width title may end before the gutter. Keep its next line
-    // with it, without treating larger headings inside either column as spanning.
-    const titleContinuation = !band.length && previous?.column === 0 && !right.length
-      && rowHeight > height * 1.35 && Math.abs(rowHeight - (previous.bottom - previous.top)) < height * .25
-      && row.top - previous.bottom < rowHeight * .8 && Math.abs(row.left - previous.left) < height;
-    const header = rowIndex === 0 && rows.length > 1 && rows[1].top - row.bottom > height * 1.2
-      && left.length > 0 && right.length > 0 && row.runs.some(i => /^\d{1,5}$/.test(runs[i].text.trim()));
-    const bridges = header || row.runs.some(i => runs[i].left < split && runs[i].right > split)
-      || (left.length && right.length && runs[right[0]].left - runs[left.at(-1)!].right < height * .8) || titleContinuation;
-    if (bridges) { flush(); result.push(row); }
-    else { if (left.length) band.push(make(left, 1)); if (right.length) band.push(make(right, 2)); }
+  let previousSplit = dominant, columnGroup = 0;
+  for (const section of sections) {
+    const split = findSplit(section, dominant);
+    if (split !== previousSplit) { flush(); columnGroup++; previousSplit = split; }
+    for (const row of section) {
+      row.columnGroup = columnGroup;
+      if (!split) { flush(); result.push(row); continue; }
+      const left = row.runs.filter(i => runs[i].right <= split), right = row.runs.filter(i => runs[i].left >= split);
+      const previous = result.at(-1), rowHeight = row.bottom - row.top;
+      // A wrapped full-width title may end before the gutter. Keep its next line
+      // with it, without treating larger headings inside either column as spanning.
+      const titleContinuation = !band.length && previous?.column === 0 && !right.length
+        && rowHeight > height * 1.35 && Math.abs(rowHeight - (previous.bottom - previous.top)) < height * .25
+        && row.top - previous.bottom < rowHeight * .8 && Math.abs(row.left - previous.left) < height;
+      const header = row === rows[0] && rows.length > 1 && rows[1].top - row.bottom > height * 1.2
+        && left.length > 0 && right.length > 0 && row.runs.some(i => /^\d{1,5}$/.test(runs[i].text.trim()));
+      const bridges = header || row.runs.some(i => runs[i].left < split && runs[i].right > split)
+        || (left.length && right.length && runs[right[0]].left - runs[left.at(-1)!].right < height * .8) || titleContinuation;
+      if (bridges) { flush(); result.push(row); }
+      else {
+        if (left.length) band.push({ ...make(left, 1), columnGroup });
+        if (right.length) band.push({ ...make(right, 2), columnGroup });
+      }
+    }
   }
   flush(); return result;
 }
@@ -160,8 +189,10 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
   host.append(layer); document.body.append(host);
   const task = new TextLayer({ textContentSource: content, container: layer, viewport });
   try {
+    // Load embedded fonts before TextLayer measures glyph widths. Measuring with
+    // fallback fonts made gutter numbers and inline equations change on revisit.
+    const rules = await tableRules(page, viewport, 2);
     await task.render();
-    const rules = await tableRules(page, viewport, 2); // Also loads font names through PDF.js' operator cache.
     const nodes: Text[] = [], runs: TextRun[] = [];
     const items = content.items.filter(item => 'str' in item);
     const mappings = items.some(item => hasUnmappedGlyph(item.str)) ? await pdfGlyphMappings(pdf) : new Map();
@@ -181,14 +212,21 @@ export async function extractPageSentences(pdf: PDFDocumentProxy, pageNumber: nu
         inkTop: matrix[5] - size * (style.ascent || .8), inkBottom: matrix[5] - size * (style.descent || -.2),
         math: mathFont.test(name), bold: /bold|semibold/i.test(name), italic: /italic|oblique/i.test(name) });
     }
-    const numbers = lineNumberRuns(runs);
-    for (const index of [...numbers].sort((a, b) => b - a)) { runs.splice(index, 1); nodes.splice(index, 1); }
-    const bodySize = median(runs.filter(r => !r.math && /[A-Za-z]{3}/.test(r.text)).map(r => r.fontSize ?? 10)) || 10;
     const origin = host.getBoundingClientRect();
     const positionedRules = rules.map(r=>({left:r.left+origin.left,right:r.right+origin.left,top:r.top+origin.top}));
+    const numbers = lineNumberRuns(runs);
+    for (const index of [...numbers].sort((a, b) => b - a)) { runs.splice(index, 1); nodes.splice(index, 1); }
     const { used } = extractTables(runs, positionedRules.filter(r => r.right - r.left > 60 * page.userUnit));
-    const bodyIds = runs.map((_,i)=>i).filter(i=>!used.has(i));
-    const bodyLines = orderedLines(bodyIds.map(i=>runs[i])).map(line=>({...line,runs:line.runs.map(i=>bodyIds[i])}));
+    algorithmRuns(runs, positionedRules).forEach(i => used.add(i));
+    const bodySize = median(runs.filter((r,i) => !used.has(i) && !r.math && /[A-Za-z]{3}/.test(r.text)).map(r => r.fontSize ?? 10)) || 10;
+    // Keep the column evidence supplied by floats even though their contents
+    // are excluded. Removing a large right-column algorithm before finding the
+    // gutter merged the few remaining right-column headings into left prose.
+    const bodyLines = orderedLines(runs).flatMap(line => {
+      const ids = line.runs.filter(i => !used.has(i));
+      return ids.length ? [{...line,runs:ids,left:Math.min(...ids.map(i=>runs[i].left)),right:Math.max(...ids.map(i=>runs[i].right)),
+        top:Math.min(...ids.map(i=>runs[i].top)),bottom:Math.max(...ids.map(i=>runs[i].bottom))}] : [];
+    });
     const lines = readingRegions(bodyLines, runs, viewport.height);
     const { used: fractionIds, fractions } = fractionRuns(runs, positionedRules);
     for (const line of lines) {

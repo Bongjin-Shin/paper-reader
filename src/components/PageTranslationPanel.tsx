@@ -41,6 +41,10 @@ export function TranslationPage({ number, t, pdf, sizing }: { number: number; t:
         <button className="translate-page-button" onClick={() => void t.load(number, true)}>{entry?.error ? '다시 시도' : '이 페이지 번역'}</button>
       </>}
       {data && <TranslatedText pageNumber={number} sentences={data.sentences} t={t} />}
+      {!!entry?.preview?.sentences.length && <p className="translation-help">
+        {entry.phase || (entry.stopped ? '여기까지 번역했습니다. 재번역으로 처음부터 다시 시작할 수 있습니다.'
+          : entry.error ? '번역이 끝까지 완료되지 않았습니다. 재번역 버튼으로 다시 시도해 주세요.' : '')}
+      </p>}
     </div>
   </aside>;
 }

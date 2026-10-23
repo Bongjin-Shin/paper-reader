@@ -40,6 +40,6 @@ export function SubscriptionQuota({ revision, provider = 'chatgpt' }: { revision
     {windows.length ? windows.map(row => <span className="chat-quota-window" key={row.key} title={`초기화: ${row.reset}\n조회: ${updated}${error ? ' · 갱신 실패, 마지막 조회값' : ''}`}>{row.text}<span className="chat-quota-reset">{row.countdown}</span></span>)
       : <span>{error ? '구독 사용량 확인 불가' : usage ? '구독 사용량 정보 없음' : '구독 사용량 확인 중…'}</span>}
     {error && windows.length > 0 && <span>갱신 실패 · 이전 조회값</span>}
-    <button type="button" disabled={loading} aria-label="구독 사용량 새로고침" title="정확한 잔여 토큰 수 대신 구독 사용 한도의 남은 비율입니다." onClick={() => setRefresh(n => n + 1)}><span key={refresh} className={refresh ? "quota-refresh-turn" : undefined}><ChatIcon name="refresh" /></span></button>
+    <button type="button" disabled={loading} aria-label="구독 사용량 새로고침" onClick={() => setRefresh(n => n + 1)}><span key={refresh} className={refresh ? "quota-refresh-turn" : undefined}><ChatIcon name="refresh" /></span></button>
   </div>;
 }

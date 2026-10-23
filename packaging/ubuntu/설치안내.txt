@@ -4,7 +4,7 @@ Ubuntu 24.04 이상 · Intel/AMD 64비트(amd64)
 설치
 1. .deb 파일을 저장한 폴더에서 터미널을 엽니다.
 2. 아래 명령으로 설치합니다. 필요한 시스템 라이브러리도 함께 설치됩니다.
-   sudo apt install ./PaperVocabulary-0.1.1-Ubuntu-amd64.deb
+   sudo apt install ./PaperVocabulary-0.1.2-Ubuntu-amd64.deb
 3. 앱 목록에서 Paper Vocabulary를 실행합니다.
 
 .deb 파일을 소프트웨어 설치 앱으로 열어 설치할 수도 있습니다.
@@ -45,5 +45,5 @@ XDG_DATA_HOME을 따로 설정했다면 해당 경로 아래에 저장됩니다.
 재설치해도 삭제한 기록은 복구되지 않으므로 필요한 자료는 제거 전에 앱 밖에 백업하세요.
 업데이트(새 DEB 덮어 설치) 시에는 기록을 보존합니다. 기존 AppImage 설치 파일·바로가기는 별도로 남습니다.
 
-버전: 0.1.1
+버전: 0.1.2
 Ubuntu 24.04 amd64에서 빌드했습니다. Ubuntu 22.04 및 ARM 기기용 설치 파일은 아닙니다.

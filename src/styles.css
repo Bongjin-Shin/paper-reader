@@ -376,6 +376,7 @@ h1 { font-size: clamp(25px, 3vw, 36px); line-height: 1.55; letter-spacing: -1.5p
 .chat-error button { margin-top: 8px; display: block; }
 .paper-chat form { border-top: 1px solid #e3e6de; padding: 12px; }
 .paper-chat textarea { display: block; resize: vertical; min-height: 70px; max-height: 180px; width: 100%; border: 1px solid #d9dfd3; border-radius: 8px; padding: 10px; background: white; font: inherit; font-size: var(--chat-font-size, 13px); }
+.paper-chat .chat-composer > textarea { resize: none; max-height: min(260px, 35vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; line-height: 1.6; }
 .chat-selection { margin-bottom: 10px; padding: 8px 10px; border: 1px solid #d9dfd3; border-left: 3px solid #8ba380; border-radius: 6px; background: #f0f4eb; }
 .chat-selection header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .paper-chat .chat-selection button { padding: 0; background: transparent; color: #526e43; border-radius: 2px; }

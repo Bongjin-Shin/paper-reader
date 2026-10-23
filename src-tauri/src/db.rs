@@ -181,7 +181,7 @@ impl Database {
         let version: i64 = connection
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(db_error)?;
-        if version > 16 {
+        if version > 17 {
             return Err("더 최신 버전에서 만든 데이터베이스입니다.".into());
         }
         if version == 0 {
@@ -322,6 +322,9 @@ impl Database {
         if version < 16 {
             connection.execute_batch(concat!("BEGIN;", include_str!("../migrations/016_chat_memory.sql"), "COMMIT;")).map_err(db_error)?;
         }
+        if version < 17 {
+            connection.execute_batch(concat!("BEGIN;", include_str!("../migrations/017_paper_fingerprints.sql"), "COMMIT;")).map_err(db_error)?;
+        }
         Ok(Self {
             connection,
             history: Default::default(),
@@ -387,6 +390,16 @@ impl Database {
         path: &Path,
         folder: Option<Option<i64>>,
     ) -> Result<(), String> {
+        self.register_paper_import(paper, path, folder, None)
+    }
+
+    pub(crate) fn register_paper_import(
+        &self,
+        paper: &Paper,
+        path: &Path,
+        folder: Option<Option<i64>>,
+        fingerprint: Option<&str>,
+    ) -> Result<(), String> {
         if let Some(folder_id) = folder {
             self.require_folder(folder_id)?;
         }
@@ -395,12 +408,15 @@ impl Database {
             .execute(
                 "INSERT INTO papers(id, file_name, file_path, title) VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT(id) DO UPDATE SET file_path = excluded.file_path,
+             added_at = CASE WHEN ?5 OR NOT EXISTS(SELECT 1 FROM library_papers WHERE paper_id = ?1)
+                 THEN excluded.added_at ELSE papers.added_at END,
              last_opened_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
                 params![
                     paper.id,
                     paper.file_name,
                     path.to_string_lossy(),
-                    paper.title
+                    paper.title,
+                    folder.is_some()
                 ],
             )
             .map_err(db_error)?;
@@ -424,6 +440,13 @@ impl Database {
                 [&paper.id],
             )
             .map_err(db_error)?;
+        if let Some(fingerprint) = fingerprint {
+            transaction.execute(
+                "INSERT INTO paper_fingerprints(paper_id, fingerprint) VALUES (?1, ?2)
+                 ON CONFLICT(paper_id) DO UPDATE SET fingerprint = excluded.fingerprint",
+                params![paper.id, fingerprint],
+            ).map_err(db_error)?;
+        }
         transaction.commit().map_err(db_error)?;
         Ok(())
     }

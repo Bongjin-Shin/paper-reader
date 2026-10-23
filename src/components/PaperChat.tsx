@@ -12,6 +12,8 @@ import { ChatIcon } from './ChatIcons';
 import { ChatQuestion } from './ChatQuestion';
 import { TextZoomControls } from './TextZoomControls';
 import type { TextZoom } from '../lib/useTextZoom';
+import { useAutoSizeTextarea } from '../lib/useAutoSizeTextarea';
+import { useTextUndo } from '../lib/useTextUndo';
 
 export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionRequest, onSelectionConsumed, zoom }: {
   paper: Paper; pdf: PDFDocumentProxy; currentPage: () => number; onPage: (number: number) => void; onClose: () => void;
@@ -25,6 +27,8 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionR
   const [provider, setProvider] = useState<'chatgpt' | 'claude'>('chatgpt'), [providerBusy, setProviderBusy] = useState(true);
   const [settings, setSettings] = useState(true);
   const input = useRef<HTMLTextAreaElement>(null), list = useRef<HTMLDivElement>(null);
+  const textUndo = useTextUndo(input, question, setQuestion, session.questionHistory);
+  useAutoSizeTextarea(input, question, zoom.scale);
   useEffect(() => { let live = true; void getChatProvider().then(value => { if (live) setProvider(value); }).catch(e => { if (live) setError(errorMessage(e)); }).finally(() => { if (live) setProviderBusy(false); }); return () => { live = false; }; }, [setError]);
   useEffect(() => { void session.load(); }, [session]);
   useEffect(() => {
@@ -101,7 +105,8 @@ export function PaperChat({ paper, pdf, currentPage, onPage, onClose, selectionR
         <blockquote>{selection.text}</blockquote>
       </section>}
       <textarea ref={input} aria-label="논문 질문" placeholder={selection ? '선택한 부분에 대해 질문하세요…' : phase ? '답변 중에도 추가 질문을 입력할 수 있어요…' : '이 논문에 대해 질문하세요…'} value={question} maxLength={8000} disabled={loading || (!!editing && !phase)}
-        onChange={e => setQuestion(e.target.value)} onKeyDown={e => {
+        {...textUndo} onKeyDown={e => {
+          if (textUndo.onKeyDown(e)) return;
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) { e.preventDefault(); void send(); }
         }} />
       <div className="chat-actions">

@@ -58,7 +58,7 @@ fn version_four_migration_exposes_existing_papers_and_preserves_all_data() {
         connection
             .query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        16
+        17
     );
     drop(db);
     assert_eq!(
@@ -312,7 +312,7 @@ fn metadata_migration_preserves_upload_time_folder_and_history() {
         connection
             .query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        16
+        17
     );
 }
 
@@ -324,7 +324,8 @@ fn metadata_and_importance_persist_without_overwriting_corrections_or_originals(
     let path = dir.path().join("data.db");
     let mut db = Database::open(&path).unwrap();
     let paper = import(&db, dir.path(), "download-123", None);
-    let uploaded = db.library().unwrap().papers[0].uploaded_at.clone();
+    let uploaded = "2020-10-08T08:00:00.000Z";
+    Connection::open(&path).unwrap().execute("UPDATE papers SET added_at = ?1", [uploaded]).unwrap();
     let value = PaperMetadata {
         title: "Real paper title".into(),
         authors: "Alice, 김연구".into(),
@@ -385,7 +386,7 @@ fn metadata_and_importance_persist_without_overwriting_corrections_or_originals(
     assert_eq!(stored.authors, "Bob");
     assert_eq!(stored.published_date, "2024");
     assert_eq!(stored.importance, 5);
-    assert_eq!(stored.uploaded_at, uploaded);
+    assert!(stored.uploaded_at.as_str() > uploaded);
     assert!(dir.path().join("download-123.pdf").is_file());
 }
 

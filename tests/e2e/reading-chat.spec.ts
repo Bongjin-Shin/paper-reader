@@ -8,13 +8,13 @@ test('subscription translation and chat models are independent, effort follows t
   await page.getByRole('button', { name: '번역 연결 설정' }).click();
   await page.getByLabel('번역 방식').selectOption('chatgpt');
   await page.getByLabel('번역 모델', { exact: true }).selectOption('test-reasoner');
-  await expect(page.getByLabel('번역 effort')).toHaveValue('');
+  await expect(page.getByLabel('번역 effort')).toHaveValue('medium');
   await page.getByLabel('번역 effort').selectOption('medium');
   await page.getByRole('button', { name: '닫기', exact: true }).click();
   await page.getByRole('button', { name: '논문 채팅', exact: true }).click();
   await chooseChatOption(page, '채팅 모델', 'Test Reasoner');
   await page.getByRole('combobox', { name: '채팅 effort', exact: true }).click();
-  await expect(page.locator('.upward-select-menu [role=option] > span:first-child')).toHaveText(['기본값 · medium', 'medium', 'high']);
+  await expect(page.locator('.upward-select-menu [role=option] > span:first-child')).toHaveText(['medium', 'high']);
   await page.keyboard.press('Escape');
   await chooseChatOption(page, '채팅 effort', 'high');
   await page.getByLabel('논문 질문').fill('이 방법의 복잡도를 설명해줘');
@@ -26,7 +26,7 @@ test('subscription translation and chat models are independent, effort follows t
   await page.getByRole('button', { name: '[p. 2]', exact: true }).click();
   expect(await page.locator('.reader').evaluate(el => el.scrollTop)).toBeGreaterThan(500);
   await chooseChatOption(page, '채팅 모델', 'Luna');
-  await expect(page.getByLabel('채팅 effort')).toHaveAttribute('data-value', '');
+  await expect(page.getByLabel('채팅 effort')).toHaveAttribute('data-value', 'low');
   const settings = await page.evaluate(() => JSON.parse(localStorage.getItem('test-models')!));
   expect(settings.translationModel).toBe('test-reasoner'); expect(settings.translationEffort).toBe('medium'); expect(settings.chatModel).toBe('gpt-5.6-luna');
   await page.reload(); await open(page); await page.getByRole('button', { name: '논문 채팅', exact: true }).click();

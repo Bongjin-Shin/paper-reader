@@ -41,7 +41,7 @@ ChatGPT·Claude 구독 연결은 공식 CLI를 통해 사용하며 해당 계정
 
 기술 구성은 **Tauri 2 · React · TypeScript · Rust · PDF.js · SQLite**입니다.
 
-Node.js **22.13 이상**, stable Rust, 운영체제별 Tauri 개발 의존성을 준비한 뒤 프로젝트 폴더에서 실행합니다. 자세한 준비 과정은 [개발 환경 안내](docs/IMPLEMENTATION_NOTES.md#개발-실행)를 참고하세요.
+Node.js **22.13 이상**, Rust **1.88 이상**, 운영체제별 Tauri 개발 의존성을 준비한 뒤 프로젝트 폴더에서 실행합니다. 자세한 준비 과정은 [개발 환경 안내](docs/IMPLEMENTATION_NOTES.md#개발-실행)를 참고하세요.
 
 ```bash
 npm ci

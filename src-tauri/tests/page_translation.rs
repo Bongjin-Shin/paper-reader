@@ -391,7 +391,7 @@ async fn legacy_layout_cache_is_kept_but_not_reused_until_an_explicit_translatio
     assert_eq!(
         sql.query_row::<i64, _, _>("PRAGMA user_version", [], |r| r.get(0))
             .unwrap(),
-        16
+        17
     );
     translate_page(&db, &request(), || async {
         Ok(response(AiProvider::Chatgpt))
@@ -671,4 +671,59 @@ async fn cancelled_translation_never_saves_or_overwrites_the_previous_page() {
     let mut force=request();force.force=true;let cancellation=Cancellation::default();
     assert!(translate_page_cancellable(&db,&force,|_,_|{cancellation.cancel();async{Ok(response(AiProvider::Api))}},|_|{},&cancellation).await.is_err());
     assert_eq!(serde_json::to_value(db.lock().unwrap().page_translation("paper",1).unwrap().unwrap()).unwrap(),serde_json::to_value(saved).unwrap());
+}
+
+#[tokio::test]
+async fn incomplete_model_output_retries_smaller_batches_in_order_and_saves_only_complete_page() {
+    use paper_vocabulary_lib::page_translation::translate_page_batched;
+    let db=Database::open(Path::new(":memory:")).unwrap();register(&db);let db=Mutex::new(db);
+    let req=request();let mut calls=0;let mut streamed=vec![];
+    let result=translate_page_batched(&db,&req,|batch,ids|{
+        calls+=1;let mut answer=response(AiProvider::Chatgpt);
+        answer.text=if calls==1 {json!({"sentences":[{"id":0,"translation":"첫 문장만 있음"}]}).to_string()}
+        else {assert_eq!(batch.sentences.len(),1);json!({"sentences":[{"id":0,"translation":format!("완료 {}",ids[0].unwrap())}]}).to_string()};
+        async{Ok(answer)}
+    },|rows|streamed.extend(rows.into_iter().map(|r|r.id))).await.unwrap();
+    assert_eq!(calls,3);assert_eq!(streamed,vec![0,1]);
+    assert_eq!(result.sentences[1].translation,"완료 1");
+    assert_eq!(db.lock().unwrap().page_translation("paper",1).unwrap().unwrap().sentences.len(),2);
+}
+
+#[tokio::test]
+async fn invalid_output_retries_are_bounded_and_never_persist_partial_success() {
+    use paper_vocabulary_lib::page_translation::translate_page_batched;
+    let db=Database::open(Path::new(":memory:")).unwrap();register(&db);let db=Mutex::new(db);
+    let mut calls=0;
+    let error=translate_page_batched(&db,&request(),|_,_|{
+        calls+=1;let mut answer=response(AiProvider::Chatgpt);answer.text="{\"sentences\":[".into();async{Ok(answer)}
+    },|_|{}).await.unwrap_err();
+    assert_eq!(calls,3);assert!(error.contains("완료되지 않았습니다"));
+    assert!(db.lock().unwrap().page_translation("paper",1).unwrap().is_none());
+}
+
+#[tokio::test]
+async fn math_dense_prose_splits_by_equation_weight_and_rejoins_without_omitting_prose() {
+    use paper_vocabulary_lib::page_translation::{translate_page_batched,EquationSource,EquationGlyph,SentenceLayout,LayoutKind};
+    let db=Database::open(Path::new(":memory:")).unwrap();register(&db);let db=Mutex::new(db);
+    let mut req=request();req.sentences.truncate(1);
+    req.sentences[0].text="We first use [[PV_MATH_1]] and then [[PV_MATH_2]] before finally obtaining [[PV_MATH_3]] as the complete result.".into();
+    req.sentences[0].layout=Some(SentenceLayout{paragraph:0,kind:LayoutKind::Paragraph,typography:None,sources:vec![],table:None,
+        math:(1..=3).map(|id|EquationSource{token:format!("[[PV_MATH_{id}]]"),text:"x+y".into(),rect:[1.,2.,100.,50.],font_size:10.,page_number:Some(1),fraction_bars:vec![],
+            glyphs:vec![EquationGlyph{text:"x".into(),x:1.,y:10.,size:10.,width:Some(5.)};400]}).collect()});
+    req.validate().unwrap();
+    let bad=json!({"sentences":[{"id":0,"translation":"[[PV_MATH_1]] [[PV_MATH_2]] [[PV_MATH_3]]","equations":(1..=3).map(|id|json!({"token":format!("[[PV_MATH_{id}]]"),"latex":"x+y"})).collect::<Vec<_>>()}]}).to_string();
+    assert!(parse_result(&req,&bad).unwrap_err().contains("본문 번역이 누락"));
+    let mut calls=0;let mut streamed=vec![];
+    let result=translate_page_batched(&db,&req,|batch,ids|{
+        calls+=1;assert!(ids.iter().all(Option::is_none));
+        assert!(batch.sentences.iter().map(|s|s.layout.as_ref().unwrap().math.len()).sum::<usize>()<=1);
+        let mut answer=response(AiProvider::Chatgpt);
+        answer.text=json!({"sentences":batch.sentences.iter().map(|s|json!({"id":s.id,"translation":s.text,
+            "equations":s.layout.as_ref().unwrap().math.iter().map(|m|json!({"token":m.token,"latex":"x+y"})).collect::<Vec<_>>()})).collect::<Vec<_>>()}).to_string();
+        async{Ok(answer)}
+    },|rows|streamed.extend(rows.into_iter().map(|r|r.id))).await.unwrap();
+    assert_eq!(calls,3);assert_eq!(streamed,vec![0]);
+    assert_eq!(result.sentences[0].translation,req.sentences[0].text);
+    assert_eq!(result.sentences[0].equations.len(),3);
+    assert_eq!(result.sentences[0].source,req.sentences[0]);
 }
