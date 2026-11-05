@@ -6,6 +6,8 @@ PDF 원문과 한국어 번역을 나란히 보면서 논문을 읽을 수 있�
 
 Windows와 Ubuntu용으로 개발하고 있습니다.
 
+macOS는 실험적인 소스 빌드로 사용할 수 있습니다. Apple Silicon에서 빌드·PDF 표시를 확인했으며, 준비·설치·검증 범위는 [macOS 안내](docs/MACOS_SETUP.md)를 참고하세요.
+
 설치 파일은 [GitHub Releases](https://github.com/Bongjin-Shin/paper-reader/releases)의 **Assets**에서 내려받을 수 있습니다. Windows는 `.exe`, Ubuntu는 `.deb` 파일을 선택하세요.
 
 ## 주요 기능

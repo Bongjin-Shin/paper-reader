@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add a native macOS source-build script, checksum-verified arm64/x86_64 Codex runtime staging, and a setup guide with Apple Silicon validation and explicit release limitations.
+
 - Use matching PDF.js compatibility builds for the display layer and worker so PDFs can render in system WebViews that lack newer JavaScript APIs, including macOS WebKit.
 - Supply ReadableStream async iteration when the system WebView lacks it, allowing PDF text extraction, selection, search, and page translation to work.
 
