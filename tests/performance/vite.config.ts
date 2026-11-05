@@ -5,7 +5,7 @@ import base from '../../vite.config';
 export default mergeConfig(base, defineConfig({
   server: { port: 1421 },
   plugins: [{ name: 'reader-profile', enforce: 'pre', transform(code, id) {
-    if (id.endsWith('/pdfjs-dist/build/pdf.mjs')) {
+    if (/\/pdfjs-dist\/(?:legacy\/)?build\/pdf\.mjs$/.test(id)) {
       // Native test builds only: distinguish PDF.js paint slices from React work.
       return code.replace(/(  executeOperatorList\(operatorList,[^\n]+\) \{)([\s\S]*?)(\n  \}\n  #restoreInitialState)/,
         "$1 const profileStart = performance.now(); try {$2 } finally { globalThis.__readerProfile?.span?.('canvasSlice', performance.now() - profileStart); }$3");

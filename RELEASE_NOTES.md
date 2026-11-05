@@ -1,3 +1,10 @@
+# Unreleased
+
+- Add a native macOS source-build script, checksum-verified arm64/x86_64 Codex runtime staging, and a setup guide with Apple Silicon validation and explicit release limitations.
+
+- Use matching PDF.js compatibility builds for the display layer and worker so PDFs can render in system WebViews that lack newer JavaScript APIs, including macOS WebKit.
+- Supply ReadableStream async iteration when the system WebView lacks it, allowing PDF text extraction, selection, search, and page translation to work.
+
 # Paper Vocabulary v0.1.2
 
 논문 번역의 구조 인식과 누락 처리를 개선하고, 채팅 입력을 더 편리하게 다듬었습니다.
